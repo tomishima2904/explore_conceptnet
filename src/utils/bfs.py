@@ -5,31 +5,37 @@ import re
 import os
 
 import file_handlers as fh
+from summarize_routes import summarize_routes
 
 
-def find_shortest_path(data: list, start: str, target: str):
+def find_shortest_path(data: list, source: str, target: str) -> tuple:
     graph = {}
     for r, h, t in data:
         if h not in graph:
             graph[h] = []
         graph[h].append((r, t))
 
-    re_start = r".*" + re.escape(start) + r"$"
+    re_start = r".*" + re.escape(source) + r"$"
     re_end = r".*" + re.escape(target) + r"$"
 
-    # start entity の 正確な URIを見つける
-    start_entities = set([])
+    start_and_end_entity = [None, None]
+
+    # entity の 正確な URIを見つける
     for key in graph.keys():
-        if len(re.findall(re_start, key)) > 0:
-            start_entities.add(key)
+        if None in start_and_end_entity:
+            if re.search(re_start, key):
+                start = key
+                start_and_end_entity[0] = key
+            if re.search(re_end, key):
+                end = key
+                start_and_end_entity[1] = key
+        else:
+            break
 
-    # 条件に一致する start entity が見つからない場合
-    if len(start_entities) == 0:
-        print("条件にあう start entity がありません")
-        return None
-
-    # start entity は一番文字列の長さが長いものにする (いいのかは不明)
-    start = max(start_entities, key=len)
+    # start or end の uri が存在しない場合
+    if None in start_and_end_entity:
+        print(f"Entity doesn't exist in data")
+        return start_and_end_entity, []
 
     # 幅優先探索 (bfs)
     queue = deque([(start, [])])
@@ -40,8 +46,9 @@ def find_shortest_path(data: list, start: str, target: str):
 
         # node が target の URI の条件に合致したら
         # すなわち、最短経路が見つかった場合、経路と共に返す
-        if len(re.findall(re_end, node)) > 0:
-            return path + [node]
+        if node == end:
+            print(f"最短経路: {path + [node]}")
+            return start_and_end_entity,  path + [node]
 
         if node in graph:
             for r, neighbor in graph[node]:
@@ -50,7 +57,8 @@ def find_shortest_path(data: list, start: str, target: str):
                     visited.add(neighbor)
 
     # 最短経路が見つからなかった場合
-    return None
+    print(f"No route found from {source} to {target}")
+    return start_and_end_entity, []
 
 
 if __name__ == "__main__":
@@ -60,7 +68,7 @@ if __name__ == "__main__":
     input_file = f"conceptnet-assertions-5.7.0_{lang}.csv.gz"
     conceptnet_path = f"{dataset_dir}/{input_file}"
 
-    char_type = "漢字"
+    char_type = "カタカナ"
     eval_dir = f"連想語頻度表/{char_type}"
     frequencies_dir = f"datasets/{eval_dir}"
 
@@ -98,21 +106,16 @@ if __name__ == "__main__":
             writer = csv.writer(wf)
 
             # 出力ファイルのheader
-            writer.writerow(("target", "len", "path"))
+            writer.writerow(("source_uri", "target_uri" "target", "len", "path"))
 
             for row in df.itertuples():
                 tail_entity = row[2]
                 target_node = f"/c/{lang}/{tail_entity}"
-                shortest_path = find_shortest_path(conceptnet, start_node, target_node)
+                start_and_end, shortest_path = find_shortest_path(conceptnet, start_node, target_node)
 
-                if shortest_path:
-                    print("最短経路:", shortest_path)
-                    shortest_path_len = len(shortest_path)
-                else:
-                    print(f"{head_entity} → {tail_entity} の最短経路が見つかりませんでした。")
-                    shortest_path_len = 0
+                shortest_path_len = len(shortest_path) - 1
 
-                writer.writerow((tail_entity, shortest_path_len, shortest_path))
+                writer.writerow((*start_and_end, tail_entity, shortest_path_len, shortest_path))
 
                 # 1つの head entity に対して 5つの tail entity へのパスを探す
                 if row[0] == 5: break
