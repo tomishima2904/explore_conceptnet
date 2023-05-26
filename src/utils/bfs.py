@@ -122,7 +122,7 @@ if __name__ == "__main__":
             writer = csv.writer(wf)
 
             # 出力ファイルのheader
-            writer.writerow(("source_uri", "target_uri" "target", "len", "path"))
+            writer.writerow(("source_uri", "target_uri", "target", "len", "paths"))
 
             for row in df.itertuples():
                 tail_entity = row[2]
