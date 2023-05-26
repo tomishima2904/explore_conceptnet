@@ -36,7 +36,7 @@ def find_shortest_path(data: list, source: str, target: str) -> tuple:
     # TODO: 名寄せ問題
     if None in start_and_end_entity:
         print(f"Entity doesn't exist in data")
-        return start_and_end_entity, []
+        return start_and_end_entity, [[]]
 
     # 幅優先探索 (bfs)
     queue = deque([(start, [])])
