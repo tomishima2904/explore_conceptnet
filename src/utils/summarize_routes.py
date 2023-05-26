@@ -9,7 +9,7 @@ def summarize_routes(input_dir: str, output_path: str) -> None:
 
     with open(output_path, "w") as wf:
         writer = csv.writer(wf)
-        writer.writerow(("source", "source_uri", "target_uri", "target" , "len", "path"))
+        writer.writerow(("source", "source_uri", "target_uri", "target" , "len", "paths"))
 
         for file_name in file_names:
             input_file = f"{input_dir}/{file_name}"

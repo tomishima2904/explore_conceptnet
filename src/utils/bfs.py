@@ -36,7 +36,7 @@ def find_shortest_path(data: list, source: str, target: str) -> tuple:
     # TODO: 名寄せ問題
     if None in start_and_end_entity:
         print(f"Entity doesn't exist in data")
-        return start_and_end_entity, []
+        return start_and_end_entity, [[]]
 
     # 幅優先探索 (bfs)
     queue = deque([(start, [])])
@@ -122,16 +122,16 @@ if __name__ == "__main__":
             writer = csv.writer(wf)
 
             # 出力ファイルのheader
-            writer.writerow(("source_uri", "target_uri" "target", "len", "path"))
+            writer.writerow(("source_uri", "target_uri", "target", "len", "paths"))
 
             for row in df.itertuples():
                 tail_entity = row[2]
                 target_node = f"/c/{lang}/{tail_entity}"
-                start_and_end, shortest_path = find_shortest_path(conceptnet, start_node, target_node)
+                start_and_end, shortest_paths = find_shortest_path(conceptnet, start_node, target_node)
 
-                shortest_path_len = len(shortest_path) - 1
+                shortest_path_len = len(shortest_paths[0]) - 1
 
-                writer.writerow((*start_and_end, tail_entity, shortest_path_len, shortest_path))
+                writer.writerow((*start_and_end, tail_entity, shortest_path_len, shortest_paths))
 
                 # 1つの head entity に対して 5つの tail entity へのパスを探す
                 if row[0] == 5: break
