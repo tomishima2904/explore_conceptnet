@@ -120,3 +120,8 @@ if __name__ == "__main__":
                 # 1つの head entity に対して 5つの tail entity へのパスを探す
                 if row[0] == 5: break
 
+    result_dir = f"results/{lang}/連想語頻度表"
+    input_dir = f"{result_dir}/{char_type}"
+    output_path = f"{result_dir}/{char_type}.csv"
+    summarize_routes(input_dir, output_path)
+
