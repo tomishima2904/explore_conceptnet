@@ -3,7 +3,7 @@ import csv
 import file_handlers as fh
 
 
-def summarize_routes(input_dir: str, output_path: str):
+def summarize_routes(input_dir: str, output_path: str) -> None:
 
     file_names = os.listdir(input_dir)
 
