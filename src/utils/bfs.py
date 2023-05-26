@@ -33,6 +33,7 @@ def find_shortest_path(data: list, source: str, target: str) -> tuple:
             break
 
     # start or end の uri が存在しない場合
+    # TODO: 名寄せ問題
     if None in start_and_end_entity:
         print(f"Entity doesn't exist in data")
         return start_and_end_entity, []
@@ -40,15 +41,27 @@ def find_shortest_path(data: list, source: str, target: str) -> tuple:
     # 幅優先探索 (bfs)
     queue = deque([(start, [])])
     visited = set()
+    shortest_paths = []
+    min_path_length = float('inf')
 
     while queue:
         node, path = queue.popleft()
 
+        if len(path) > min_path_length:
+            # より短い経路が見つかっている場合、探索終了
+            print(shortest_paths)
+            break
+
         # node が target の URI の条件に合致したら
         # すなわち、最短経路が見つかった場合、経路と共に返す
         if node == end:
-            print(f"最短経路: {path + [node]}")
-            return start_and_end_entity,  path + [node]
+            # より短い経路が見つかった場合、それまでの経路を無効化
+            if len(path) < min_path_length:
+                shortest_paths = []
+                min_path_length = len(path)
+
+            # 現在の経路を最短経路として追加
+            shortest_paths.append(path + [node])
 
         if node in graph:
             for r, neighbor in graph[node]:
@@ -56,9 +69,12 @@ def find_shortest_path(data: list, source: str, target: str) -> tuple:
                     queue.append((neighbor, path + [node]))
                     visited.add(neighbor)
 
-    # 最短経路が見つからなかった場合
-    print(f"No route found from {source} to {target}")
-    return start_and_end_entity, []
+    # 経路がない場合
+    if shortest_paths == []:
+        print(f"No paths found from {source} to {target}.")
+        shortest_paths = [[]]
+
+    return start_and_end_entity, shortest_paths
 
 
 if __name__ == "__main__":
