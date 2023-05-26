@@ -127,11 +127,11 @@ if __name__ == "__main__":
             for row in df.itertuples():
                 tail_entity = row[2]
                 target_node = f"/c/{lang}/{tail_entity}"
-                start_and_end, shortest_path = find_shortest_path(conceptnet, start_node, target_node)
+                start_and_end, shortest_paths = find_shortest_path(conceptnet, start_node, target_node)
 
-                shortest_path_len = len(shortest_path) - 1
+                shortest_path_len = len(shortest_paths[0]) - 1
 
-                writer.writerow((*start_and_end, tail_entity, shortest_path_len, shortest_path))
+                writer.writerow((*start_and_end, tail_entity, shortest_path_len, shortest_paths))
 
                 # 1つの head entity に対して 5つの tail entity へのパスを探す
                 if row[0] == 5: break
