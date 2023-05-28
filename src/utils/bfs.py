@@ -80,8 +80,8 @@ def find_shortest_path(data: list, source: str, target: str) -> tuple:
 
 if __name__ == "__main__":
 
-    dataset_dir = "datasets/conceptnet"
     lang = "ja"
+    dataset_dir = f"datasets/conceptnet-assertions-5.7.0/{lang}"
     input_file = f"conceptnet-assertions-5.7.0_{lang}.csv.gz"
     conceptnet_path = f"{dataset_dir}/{input_file}"
 

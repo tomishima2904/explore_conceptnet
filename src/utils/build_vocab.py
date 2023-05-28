@@ -15,8 +15,8 @@ def build_vocab(input_path: str, output_path: str):
 
 
 if __name__ == "__main__":
-    dataset_dir = "datasets/conceptnet"
     lang = "ja"
+    dataset_dir = f"datasets/conceptnet-assertions-5.7.0/{lang}"
     input_file = f"conceptnet-assertions-5.7.0_{lang}.csv.gz"
     input_path = f"{dataset_dir}/{input_file}"
 
