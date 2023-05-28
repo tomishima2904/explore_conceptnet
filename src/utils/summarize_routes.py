@@ -9,7 +9,7 @@ def summarize_routes(input_dir: str, output_path: str) -> None:
 
     with open(output_path, "w") as wf:
         writer = csv.writer(wf)
-        writer.writerow(("source", "source_uri", "target_uri", "target" , "len", "paths"))
+        writer.writerow(("source", "source_uri", "target_uri", "target" , "hops", "paths", "relations"))
 
         for file_name in file_names:
             input_file = f"{input_dir}/{file_name}"
@@ -17,14 +17,14 @@ def summarize_routes(input_dir: str, output_path: str) -> None:
             df = fh.read_csv_as_df(input_file, header=0)
 
             for row in df.itertuples():
-                writer.writerow((head_entity, *row))
+                writer.writerow((head_entity, *row[1:]))  # ヘッダー列を除く
 
     print(f"Successfully dumped {output_path} !")
 
 
 if __name__ == "__main__":
     result_dir = "results/ja/連想語頻度表"
-    char_type = "カタカナ"
+    char_type = "ひらがな"
     input_dir = f"{result_dir}/{char_type}"
     fh.makedirs(input_dir)
 
