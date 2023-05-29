@@ -3,8 +3,8 @@ import gzip
 import json
 from tqdm import tqdm
 
-from extract_entity import extract_entity
 import file_handlers as fh
+from extract_entity import extract_entity
 from extract_sentences import extract_sentences
 
 
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # 日本語Wikipediaをロード
     print("Loading wikipedia corpus ...")
     with gzip.open(input_corpus_path, "rt") as f:
-        wiki_corpus = f.readlines()
+        corpus = f.readlines()
 
     # ConceptNetをロード
     lang = "ja"
@@ -53,24 +53,24 @@ if __name__ == "__main__":
             tail_entity = tail_entity.replace("_", " ")
         unique_pairs.add((head_entity, tail_entity))
 
-    wiki_sentences_dict = {}
+    sentences_dict_corpus = {}
 
     for pair in tqdm(unique_pairs, total=len(unique_pairs)):
         head_entity = pair[0]
         tail_entity = pair[1]
 
         # head entity が キーになければ追加
-        if head_entity not in wiki_sentences_dict:
-            wiki_sentences_dict[head_entity] = {}
+        if head_entity not in sentences_dict_corpus:
+            sentences_dict_corpus[head_entity] = {}
 
         # tail entity が キーになければ追加して、文をコーパスから抽出
-        if not tail_entity in wiki_sentences_dict[head_entity]:
-            wiki_sentences_dict[head_entity][tail_entity] = \
-            extract_sentences(head_entity, tail_entity, wiki_corpus)
+        if not tail_entity in sentences_dict_corpus[head_entity]:
+            sentences_dict_corpus[head_entity][tail_entity] = \
+            extract_sentences(head_entity, tail_entity, corpus)
 
     # jsonにコーパスを出力
     output_dir = "datasets/jawiki-20221226"
     fh.makedirs(output_dir)
     output_corpus_path = f"{output_dir}/extracted_corpus.json"
     with open(output_corpus_path, "w") as f:
-        json.dump(wiki_sentences_dict, f, ensure_ascii=False)
+        json.dump(sentences_dict_corpus, f, ensure_ascii=False)
