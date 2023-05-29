@@ -6,6 +6,8 @@ def extract_entity(lang: str, uri: str) -> str:
     match = re.search(pattern, uri)
     if match:
         entity_str = match.group(1)
+    else:
+        entity_str = None
     return entity_str
 
 
