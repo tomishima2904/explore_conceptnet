@@ -58,6 +58,17 @@ def normalize_neologd(s):
     return s
 
 
+def subtract_hashtag(s):
+    """ ##を削除するための関数
+    wikipediaのダンプデータは entity (リンク) が `##xx##` のように # で囲まれているので、それを除きます。
+    例. ##大鰐テレビ中継局##(おおわにてれびちゅうけいきょく) → 大鰐テレビ中継局(おおわにてれびちゅうけいきょく)
+    """
+    pattern = r"##(.*?)##"
+    s = re.sub(pattern, r"\1", s)
+    return s
+
+
 if __name__ == "__main__":
     raw_text = "##大鰐テレビ中継局## （ おおわ に てれ びちゅう けいきょく ） は 、 ##青森県## ##南津軽郡## ##大鰐町## に 設置 さ れ て いる テレビ ##中継局## で ある 。"
-    print(normalize_neologd(raw_text))
+    normalized_text = normalize_neologd(raw_text)
+    print(subtract_hashtag(normalized_text))
