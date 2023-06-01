@@ -2,9 +2,9 @@ import csv
 import gzip
 import random
 import datetime
+import sys
 
 import file_handlers as fh
-from extract_entity import extract_entity
 
 
 def extract_sentences(
@@ -32,6 +32,7 @@ def extract_sentences(
 
             i += 1
             if i % 1000 == 0:
+                sys.stdout.flush() # 明示的にflush
                 print(f"{datetime.datetime.now()}: {i} triplets have been processed.")
     print(f"Successfully dumped {output_path} !")
 
