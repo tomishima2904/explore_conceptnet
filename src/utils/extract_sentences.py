@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     # 日本語Wikipediaをロード
     corpus_dir = "datasets/jawiki-20221226"
-    input_corpus_path = f"{corpus_dir}/train_sentences_700.txt.gz"
+    input_corpus_path = f"{corpus_dir}/jawiki_sentences_1000.txt.gz"
 
     print("Loading wikipedia corpus ...")
     with gzip.open(input_corpus_path, "rt") as f:
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     # with open(input_corpus_path, "r") as f:
     #     corpus = f.readlines()
 
-    output_corpus_path = f"{corpus_dir}/extracted_corpus_{dataset_type}.csv.gz"
+    output_corpus_path = f"{corpus_dir}/rhts_{dataset_type}.csv.gz"
 
     print("Extracting sentences ...")
     extract_sentences(output_path=output_corpus_path,
