@@ -15,6 +15,8 @@ def extract_sentences(
     with gzip.open(output_path, "wt") as f:
         writer = csv.writer(f)
         i = 0
+        print(f"{datetime.datetime.now()}: Start")
+        sys.stdout.flush()
         for row in conceptnet:
             # URI から entity を抽出
             head = row[1]
