@@ -33,7 +33,7 @@ def extract_sentences(
             writer.writerow(data)
 
             i += 1
-            if i % 1000 == 0:
+            if i % 100 == 0:
                 sys.stdout.flush() # 明示的にflush
                 print(f"{datetime.datetime.now()}: {i} triplets have been processed.")
     print(f"Successfully dumped {output_path} !")
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     # with open(input_corpus_path, "r") as f:
     #     corpus = f.readlines()
 
-    output_corpus_path = f"{corpus_dir}/rhts_{dataset_type}.csv.gz"
+    output_corpus_path = f"{corpus_dir}/origin_rhts_{dataset_type}.csv.gz"
 
     print("Extracting sentences ...")
     extract_sentences(output_path=output_corpus_path,
