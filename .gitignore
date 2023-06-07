@@ -164,5 +164,13 @@ cython_debug/
 
 # Ours
 results/
+tmp/
 datasets/連想語頻度表
 datasets/conceptnet-assertions-5.7.0
+datasets/stair_actions_captions
+datasets/STAIR-captions
+datasets/jawiki-20221226
+datasets/rel_gen/*_rhts
+datasets/rel_gen/statistics
+nohup.out
+hoge*
