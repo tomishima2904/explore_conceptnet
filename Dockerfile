@@ -8,7 +8,7 @@ ENV LANG=ja_JP.UTF-8 LANGUAGE=ja_JP:ja LC_ALL=ja_JP.UTF-8 \
     TZ=JST-9 TERM=xterm PYTHONIOENCODING=utf-8 \
     DEBIAN_FRONTEND=noninteractive
 
-WORKDIR /mnt/tomishima2904/word2box
+WORKDIR /work/tomishima2904/explore_conceptnet
 
 # Define the user and the group
 ARG USERNAME=tomishima2904 \
@@ -29,7 +29,7 @@ RUN apt-get update -y && apt-get upgrade -y && apt-get install -y \
 # 京都大学BARTの環境構築
 # Dev env for KU-BART
 COPY fairseq ./fairseq/
-RUN python -V && cd fairseq && pipenv install
+RUN python -V && cd fairseq && pipenv install && cd ../
 
 # コンテナ内でルートユーザーとしてのみ振る舞いたいなら以下を消す
 # Delete line below if you want to play as root
