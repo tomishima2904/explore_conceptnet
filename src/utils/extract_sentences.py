@@ -14,11 +14,10 @@ def extract_sentences(
         num_extract: int = 5) -> None:
     with gzip.open(output_path, "wt") as f:
         writer = csv.writer(f)
-        i = 0
         print(f"{datetime.datetime.now()}: Start")
         sys.stdout.flush()
-        for row in conceptnet:
-            # URI から entity を抽出
+
+        for i, row in enumerate(conceptnet):
             head = row[1]
             tail = row[2]
 
@@ -26,13 +25,12 @@ def extract_sentences(
             for sentence in corpus:
                 if head in sentence and tail in sentence:
                     sentences.append(sentence)
-                    if len(sentences) == num_extract:
-                        break
+                    # if len(sentences) == num_extract:
+                    #     break
 
             data = (row[0], head, tail, sentences)
             writer.writerow(data)
 
-            i += 1
             if i % 100 == 0:
                 sys.stdout.flush() # 明示的にflush
                 print(f"{datetime.datetime.now()}: {i} triplets have been processed.")
@@ -42,20 +40,20 @@ def extract_sentences(
 if __name__ == "__main__":
     # ConceptNetをロード
     lang = "ja"
-    dataset_type = "train"
+    dataset_type = "1"
     dataset_dir = f"datasets/conceptnet-assertions-5.7.0/{lang}"
-    input_file = f"{dataset_type}_triplets.csv"
+    input_file = f"triplets_{dataset_type}.csv"
     conceptnet_path = f"{dataset_dir}/{input_file}"
     conceptnet = fh.read_csv(conceptnet_path, has_header=False)
 
     # 日本語Wikipediaをロード
     corpus_dir = "datasets/jawiki-20221226"
-    input_corpus_path = f"{corpus_dir}/jawiki_sentences_1000.txt.gz"
+    input_corpus_path = f"{corpus_dir}/jawiki_sentences_200.txt.gz"
 
     print("Loading wikipedia corpus ...")
     with gzip.open(input_corpus_path, "rt") as f:
         corpus = f.readlines()
-    random.shuffle(corpus)
+    # random.shuffle(corpus)
 
     # # STAIR Captionsをロード
     # corpus_dir = "datasets/STAIR-captions"
@@ -65,7 +63,8 @@ if __name__ == "__main__":
     # with open(input_corpus_path, "r") as f:
     #     corpus = f.readlines()
 
-    output_corpus_path = f"{corpus_dir}/origin_rhts_{dataset_type}.csv.gz"
+    output_dir = "datasets/rel_gen/origin_rhts"
+    output_corpus_path = f"{output_dir}/origin_rhts_200_{dataset_type}.csv.gz"
 
     print("Extracting sentences ...")
     extract_sentences(output_path=output_corpus_path,
