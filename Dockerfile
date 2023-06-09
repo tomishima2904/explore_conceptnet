@@ -26,15 +26,6 @@ RUN apt-get update -y && apt-get upgrade -y && apt-get install -y \
     build-essential ca-certificates software-properties-common \
     nano vim wget curl file git make xz-utils kmod pipenv locales task-japanese
 
-# 下記からCUDA Toolkitをダウンロード (Debian 11.7, CUDA 11.7)
-# https://developer.nvidia.com/cuda-11-7-1-download-archive
-RUN wget https://developer.download.nvidia.com/compute/cuda/11.7.1/local_installers/cuda-repo-debian11-11-7-local_11.7.1-515.65.01-1_amd64.deb && \
-    dpkg -i cuda-repo-debian11-11-7-local_11.7.1-515.65.01-1_amd64.deb && \
-    cp /var/cuda-repo-debian11-11-7-local/cuda-*-keyring.gpg /usr/share/keyrings/ && \
-    add-apt-repository contrib && \
-    apt-get update -y && \
-    apt-get install -y cuda --no-install-recommends cuda
-
 # 京都大学BARTの環境構築
 # Dev env for KU-BART
 COPY fairseq ./fairseq/
