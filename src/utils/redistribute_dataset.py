@@ -15,10 +15,9 @@ with open(relations_data_path, "r") as f:
 
 input_dir = "datasets/rel_gen/cleaned_rhts"
 old_paths = [f"{input_dir}/cleaned_rhts_200_1.csv.gz",
-                   f"{input_dir}/cleaned_rhts_200_2.csv.gz",
-                   f"{input_dir}/cleaned_rhts_200_3.csv.gz",
-                   f"{input_dir}/cleaned_rhts_200_4.csv.gz",
-                   ]
+             f"{input_dir}/cleaned_rhts_200_2.csv.gz",
+             f"{input_dir}/cleaned_rhts_200_3.csv.gz",
+             f"{input_dir}/cleaned_rhts_200_4.csv.gz",]
 
 new_train_data = []
 new_val_data = []
