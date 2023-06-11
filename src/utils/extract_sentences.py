@@ -36,24 +36,6 @@ def extract_sentences(
     print(f"Successfully dumped {output_path} !")
 
 
-# 抽出文がないものを除外し、文末の改行コードを除去
-def clean_sentences(input_path: str, output_path: str):
-    with gzip.open(input_path, 'rt') as f:
-        reader = csv.reader(f)
-
-    with gzip.open(output_path, 'wt') as f:
-        writer = csv.writer(f)
-        for i, row in enumerate(reader):
-            # 抽出文が無い場合新しいデータセットには記述しない
-            if row[-1] == "[]":
-                continue
-            else:
-                sentences = eval(row[-1])
-                cleaned_sentences = [sentence.rstrip('\n') for sentence in sentences]
-                writer.writerow((*row[:-1], cleaned_sentences))
-    print(f"Successfully dumped {output_path} !")
-
-
 if __name__ == "__main__":
     # ConceptNetをロード
     lang = "ja"
@@ -87,7 +69,3 @@ if __name__ == "__main__":
                       corpus=corpus,
                       conceptnet=conceptnet)
 
-    print("Claning sentences ...")
-    cleaned_output_dir = "datasets/rel_gen/cleaned_rhts"
-    output_cleaned_path = f"{cleaned_output_dir}/cleaned_rhts_200_{dataset_type}.csv.gz"
-    clean_sentences(input_path=output_corpus_path, output_path=output_cleaned_path)
