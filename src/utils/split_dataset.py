@@ -1,10 +1,6 @@
 import gzip
 import csv
-from sklearn.model_selection import train_test_split
-import random
-import sys
 
-import file_handlers as fh
 from extract_entity import extract_entity
 from normalize_neologd import normalize_neologd
 
@@ -23,7 +19,10 @@ with gzip.open(conceptnet_path, 'rt') as f:
 # 例. relation_mapping["/r/RelatedTo"] = 関連する
 # 参照. datasets/conceptnet-assertions-5.7.0/ja/relations.csv
 relations_data_path = f"{dataset_dir}/relations.csv"
-relations_data, _ = fh.read_csv(relations_data_path, has_header=True)
+with open(relations_data_path, 'r') as f:
+    reader = csv.reader(f)
+    header = next(reader)
+    relations_data = [row for row in reader]
 relation_mapping = {row[0]: row[2] for row in relations_data}
 
 all_data = {relation_uri: [] for relation_uri in relation_mapping.keys()}
@@ -58,51 +57,13 @@ for row in conceptnet:
 
     all_data[relation_uri].append([head, tail])
 
-train_data = []
-val_data = []
-test_data = []
-
-for relation_uri, heads_and_tails in all_data.items():
-    # (relation, head, tail) のトリプレットを作成
-    triplets = [[relation_mapping[relation_uri], pair[0], pair[1]]
-                for pair in heads_and_tails]
-
-    # URIが`/r/RelatedTo`なら全てテストセットに回す
-    if relation_uri == "/r/RelatedTo":
-        test_data.extend(triplets)
-
-    # train:val:test = 8:1:1 に分割
-    else:
-        if len(triplets) < 1:
-            continue
-        # 8:2で分割
-        train, val_and_test = train_test_split(triplets,
-                                               train_size=0.8,
-                                               test_size=0.2,
-                                               shuffle=True,
-                                               random_state=19990429)
-
-        if len(val_and_test) < 2:
-            continue
-        # (8):1:1で分割
-        val, test = train_test_split(val_and_test,
-                                     train_size=0.5,
-                                     test_size=0.5,
-                                     shuffle=True,
-                                     random_state=19990429)
-        train_data.extend(train)
-        val_data.extend(val)
-        test_data.extend(test)
-
-random.shuffle(train_data)
-random.shuffle(val_data)
-random.shuffle(test_data)
-
 output_dir = dataset_dir
-output_train_path = f"{output_dir}/train_triplets.csv"
-output_val_path = f"{output_dir}/val_triplets.csv"
-output_test_path = f"{output_dir}/test_triplets.csv"
+output_path = f"{output_dir}/origin_triplets.csv"
 
-fh.write_csv(path=output_train_path, data=train_data)
-fh.write_csv(path=output_val_path, data=val_data)
-fh.write_csv(path=output_test_path, data=test_data)
+with open(output_path, 'w') as f:
+    writer = csv.writer(f)
+    for relation_uri, heads_and_tails in all_data.items():
+        # (relation, head, tail) のトリプレットを作成
+        triplets = [[relation_mapping[relation_uri], pair[0], pair[1]]
+                    for pair in heads_and_tails]
+        writer.writerow(triplets)
