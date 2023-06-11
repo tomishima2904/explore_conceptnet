@@ -1,6 +1,5 @@
 import csv
 import gzip
-import random
 import datetime
 import sys
 
@@ -71,7 +70,6 @@ if __name__ == "__main__":
     print("Loading wikipedia corpus ...")
     with gzip.open(input_corpus_path, "rt") as f:
         corpus = f.readlines()
-    # random.shuffle(corpus)
 
     # # STAIR Captionsをロード
     # corpus_dir = "datasets/STAIR-captions"
