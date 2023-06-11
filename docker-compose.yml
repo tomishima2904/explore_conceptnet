@@ -7,8 +7,8 @@ services:
   #   env_file: ./.env
   #   ports:
   #     - 3307:3307
-  ku-bart:
-    container_name: ku-bart
+  juman:
+    container_name: juman-ku-bart
     build:
       context: .
       dockerfile: Dockerfile
