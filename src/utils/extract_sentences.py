@@ -3,8 +3,6 @@ import gzip
 import datetime
 import sys
 
-import file_handlers as fh
-
 
 def extract_sentences(
         output_path: str,
@@ -43,7 +41,9 @@ if __name__ == "__main__":
     dataset_dir = f"datasets/conceptnet-assertions-5.7.0/{lang}"
     input_file = f"triplets_{dataset_type}.csv"
     conceptnet_path = f"{dataset_dir}/{input_file}"
-    conceptnet = fh.read_csv(conceptnet_path, has_header=False)
+    with open(conceptnet_path, 'r') as f:
+        reader = csv.reader(f)
+        conceptnet = [row for row in reader]
 
     # 日本語Wikipediaをロード
     corpus_dir = "datasets/jawiki-20221226"
