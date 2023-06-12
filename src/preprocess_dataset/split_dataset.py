@@ -14,25 +14,21 @@ with open(relations_data_path, "r") as f:
         all_data[row[2]] = []
 
 input_dir = "datasets/rel_gen/cleaned_rhts"
-old_paths = [f"{input_dir}/cleaned_rhts_200_1.csv.gz",
-             f"{input_dir}/cleaned_rhts_200_2.csv.gz",
-             f"{input_dir}/cleaned_rhts_200_3.csv.gz",
-             f"{input_dir}/cleaned_rhts_200_4.csv.gz",]
+input_path = f"{input_dir}/cleaned_rhts_200.csv.gz"
 
 new_train_data = []
 new_val_data = []
 new_test_data = []
 
-for old_path in old_paths:
-    with gzip.open(old_path, 'rt') as f:
-        reader = csv.reader(f)
-        for row in reader:
-            if row[3] == "[]":
-                continue
-            elif row[0] == "関連する":
-                new_test_data.append(row)
-            else:
-                all_data[row[0]].append(row)
+with gzip.open(input_path, 'rt') as f:
+    reader = csv.reader(f)
+    for row in reader:
+        if row[3] == "[]":
+            continue
+        elif row[0] == "関連する":
+            new_test_data.append(row)
+        else:
+            all_data[row[0]].append(row)
 
 for relation, data in all_data.items():
     if len(data) < 1:
@@ -57,7 +53,7 @@ random.shuffle(new_train_data)
 random.shuffle(new_val_data)
 random.shuffle(new_test_data)
 
-output_dir = "datasets/rel_gen/redistributed_rhts"
+output_dir = "datasets/rel_gen/rhts_200"
 new_train_path = f"{output_dir}/rhts_200_train.csv.gz"
 new_val_path = f"{output_dir}/rhts_200_val.csv.gz"
 new_test_path = f"{output_dir}/rhts_200_test.csv.gz"
