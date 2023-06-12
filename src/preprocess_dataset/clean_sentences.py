@@ -5,10 +5,13 @@ import sys
 
 
 # 抽出文がないものを除外し、文末の改行コードを除去
-def clean_sentences(input_path: str, output_path: str):
-    with gzip.open(input_path, 'rt') as rf, gzip.open(output_path, 'wt') as wf:
+def clean_sentences(input_path: str, output_path: str, err_path: str):
+    with gzip.open(input_path, 'rt') as rf, \
+        gzip.open(output_path, 'wt') as wf, \
+        open(err_path, 'w') as ef:
         reader = csv.reader(rf)
         writer = csv.writer(wf)
+        err_writer = csv.writer(ef)
         for i, row in enumerate(reader):
             # 抽出文が無い場合新しいデータセットには記述しない
             if row[-1] == "[]":
@@ -16,7 +19,11 @@ def clean_sentences(input_path: str, output_path: str):
             else:
                 sentences = eval(row[-1])
                 cleaned_sentences = [sentence.rstrip('\n') for sentence in sentences]
-                writer.writerow((*row[:-1], cleaned_sentences))
+                data = [*row[:-1], cleaned_sentences]
+                if len(data) == 4:
+                    writer.writerow(data)
+                else:
+                    err_writer.writerow([i+1, *data])
 
             if i % 100 == 0:
                 sys.stdout.flush() # 明示的にflush
