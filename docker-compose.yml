@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  juman:
+    container_name: juman-ku-bart
+    build:
+      context: .
+      dockerfile: Dockerfile
+      network: host
+      shm_size: 80gb
+    volumes:
+      - /work/tomishima2904/explore_conceptnet:/work/tomishima2904/explore_conceptnet
+    ports:
+      - '4417:4417'
+    stdin_open: true
+    tty: true
