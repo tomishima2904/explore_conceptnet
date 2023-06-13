@@ -1,12 +1,6 @@
 version: '3'
 
 services:
-  # db:
-  #   container_name: mysql-ku-bart
-  #   image: mysql:8
-  #   env_file: ./.env
-  #   ports:
-  #     - 3307:3307
   juman:
     container_name: juman-ku-bart
     build:
@@ -17,8 +11,6 @@ services:
     volumes:
       - /work/tomishima2904/explore_conceptnet:/work/tomishima2904/explore_conceptnet
     ports:
-      - '4416:4416'
+      - '4417:4417'
     stdin_open: true
     tty: true
-    # depends_on:
-    #   - db

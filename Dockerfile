@@ -1,5 +1,4 @@
-# FROM nvidia/cuda:11.7.1-cudnn8-devel-ubuntu22.04
-FROM python:3.9-bullseye
+FROM kunlp/jumanpp
 USER root
 
 # 環境変数を定義
@@ -10,27 +9,5 @@ ENV LANG=ja_JP.UTF-8 LANGUAGE=ja_JP:ja LC_ALL=ja_JP.UTF-8 \
 
 WORKDIR /work/tomishima2904/explore_conceptnet
 
-# Define the user and the group
-ARG USERNAME=tomishima2904 \
-    USER_UID=1098 \
-    USER_GID=1000
-
-# docker image に上記変数で定義したユーザーが存在しない場合、ユーザーを登録
-# If the user defiend above does not exists, add this
-RUN if ! id -u $USERNAME > /dev/null 2>&1; then \
-        groupadd --gid $USER_GID $USERNAME && \
-        useradd --uid $USER_UID --gid $USER_GID -m $USERNAME; \
-    fi
-
-RUN apt-get update -y && apt-get upgrade -y && apt-get install -y \
-    build-essential ca-certificates software-properties-common \
-    nano vim wget curl file git make xz-utils kmod pipenv locales task-japanese
-
-# 京都大学BARTの環境構築
-# Dev env for KU-BART
-COPY fairseq ./fairseq/
-RUN python -V && cd fairseq && pipenv install && cd ../
-
-# コンテナ内でルートユーザーとしてのみ振る舞いたいなら以下を消す
-# Delete line below if you want to play as root
-USER $USERNAME
+RUN apk update && apk add \
+    python3 python3-dev py3-pip alpine-sdk nano vim wget curl file git make
