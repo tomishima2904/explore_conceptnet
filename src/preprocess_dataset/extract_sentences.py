@@ -16,28 +16,25 @@ def extract_sentences(
         print(f"{datetime.datetime.now()}: Start")
         sys.stdout.flush()
 
-        word_pairs = set()
-
         for i, row in enumerate(conceptnet):
             head = row[1]
             tail = row[2]
-            word_pair = tuple(sorted((head, tail)))
 
-            if word_pair not in word_pairs:
-                word_pairs.add(word_pair)
-                sentences = []
-                for sentence in corpus:
-                    if head in sentence and tail in sentence:
-                        sentences.append(sentence)
-                        # if len(sentences) == num_extract:
-                        #     break
+            sentences = []
+            for sentence in corpus:
+                if head in sentence and tail in sentence:
+                    sentences.append(sentence)
+                    # if len(sentences) == num_extract:
+                    #     break
 
-                num_sentences = len(sentences)
-                data = (head, tail, num_sentences, sentences)
-                if num_sentences < 1000000:
-                    writer.writerow(data)
-                else:
-                    writer_over1m.writerow(data)
+            num_sentences = len(sentences)
+            data = (head, tail, num_sentences, sentences)
+
+            # 抽出文の総数があまりにも多い場合は別のファイルへ出力
+            if num_sentences < 1000000:
+                writer.writerow(data)
+            else:
+                writer_over1m.writerow(data)
 
             if i % 100 == 0:
                 sys.stdout.flush() # 明示的にflush

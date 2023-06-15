@@ -60,6 +60,7 @@ def conceptnet_to_triplets(input_path, output_path, removed_path, lang="ja"):
             writer.writerows(triplets)
 
 
+# トリプレットから単語の組を作成して出力する
 def make_word_pairs(input_path, output_path):
     word_pairs = set()
     with open(input_path, "r") as f:
