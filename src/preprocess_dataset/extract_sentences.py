@@ -6,27 +6,38 @@ import sys
 
 def extract_sentences(
         output_path: str,
+        over1m_path: str,
         corpus: list,
         conceptnet: list,
         num_extract: int = 5) -> None:
-    with gzip.open(output_path, "wt") as f:
+    with gzip.open(output_path, "wt") as f, gzip.open(over1m_path, "wt") as f1m:
         writer = csv.writer(f)
+        writer_over1m = csv.writer(f1m)
         print(f"{datetime.datetime.now()}: Start")
         sys.stdout.flush()
+
+        word_pairs = set()
 
         for i, row in enumerate(conceptnet):
             head = row[1]
             tail = row[2]
+            word_pair = tuple(sorted((head, tail)))
 
-            sentences = []
-            for sentence in corpus:
-                if head in sentence and tail in sentence:
-                    sentences.append(sentence)
-                    # if len(sentences) == num_extract:
-                    #     break
+            if word_pair not in word_pairs:
+                word_pairs.add(word_pair)
+                sentences = []
+                for sentence in corpus:
+                    if head in sentence and tail in sentence:
+                        sentences.append(sentence)
+                        # if len(sentences) == num_extract:
+                        #     break
 
-            data = (row[0], head, tail, sentences)
-            writer.writerow(data)
+                num_sentences = len(sentences)
+                data = (head, tail, num_sentences, sentences)
+                if num_sentences < 1000000:
+                    writer.writerow(data)
+                else:
+                    writer_over1m.writerow(data)
 
             if i % 100 == 0:
                 sys.stdout.flush() # 明示的にflush
@@ -62,10 +73,12 @@ if __name__ == "__main__":
     #     corpus = f.readlines()
 
     output_dir = "datasets/rel_gen/origin_rhts"
-    output_corpus_path = f"{output_dir}/origin_rhts_200_{dataset_type}.csv.gz"
+    output_corpus_path = f"{output_dir}/origin_htns_200_{dataset_type}.csv.gz"
+    output_over1m_path = f"{output_dir}/origin_htns_200_{dataset_type}_over1m.csv.gz"
 
     print("Extracting sentences ...")
     extract_sentences(output_path=output_corpus_path,
+                      over1m_path=output_over1m_path,
                       corpus=corpus,
                       conceptnet=conceptnet)
 
