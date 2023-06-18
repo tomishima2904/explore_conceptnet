@@ -5,15 +5,18 @@ import sys
 import os
 
 
-dic = "jumanpp"
-assert dic in ["ipadic", "neologd", "jumanpp"]
-if dic == "ipadic":
-    import MeCab
-    tokenizer = MeCab.Tagger("-d /usr/local/lib/mecab/dic/ipadic")
-elif dic == "neologd":
-    import MeCab
-    tokenizer = MeCab.Tagger("-d /usr/local/lib/mecab/dic/mecab-ipadic-neologd")
-elif dic == "jumanpp":
+tokenizer_type = "jumanpp"
+dic = ""
+assert tokenizer_type in ["jumanpp", "mecab"]
+if tokenizer_type == "mecab":
+    assert dic in ["ipadic", "neologd"]
+    if dic == "ipadic":
+        import MeCab
+        tokenizer = MeCab.Tagger("-d /usr/local/lib/mecab/dic/ipadic")
+    elif dic == "neologd":
+        import MeCab
+        tokenizer = MeCab.Tagger("-d /usr/local/lib/mecab/dic/mecab-ipadic-neologd")
+elif tokenizer_type == "jumanpp":
     from transformers import AutoTokenizer
     tokenizer = AutoTokenizer.from_pretrained("nlp-waseda/roberta-base-japanese-with-auto-jumanpp")
 
