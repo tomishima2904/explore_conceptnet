@@ -41,6 +41,7 @@ if __name__ == "__main__":
     input_path = f"{input_dir}/origin_rhts_200_{dataset_type}.csv.gz"
     output_dir = "datasets/rel_gen/cleaned_rhts"
     output_path = f"{output_dir}/cleaned_rhts_200_{dataset_type}.csv.gz"
+    err_path = f"{output_dir}/cleaned_rhts_200_{dataset_type}_error.csv.gz"
 
     print("Cleaning sentences ...")
-    clean_sentences(input_path, output_path=output_path)
+    clean_sentences(input_path, output_path=output_path, err_path=err_path)
