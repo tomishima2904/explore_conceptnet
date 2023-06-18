@@ -83,12 +83,12 @@ if __name__ == "__main__":
 
     dataset_type = "1"
     input_dir = "datasets/rel_gen/cleaned_rhts"
-    input_path = f"{input_dir}/cleaned_rhts_200_{dataset_type}.csv.gz"
-    output_dir = f"datasets/rel_gen/{dic}_rhts"
+    input_path = f"{input_dir}/cleaned_htns_200_{dataset_type}.csv.gz"
+    output_dir = f"datasets/rel_gen/{dic}_htns"
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
-    output_path = f"{output_dir}/filtered_rhts_200_{dataset_type}.csv.gz"
-    removed_path = f"{output_dir}/removed_rhts_200_{dataset_type}.csv.gz"
+    output_path = f"{output_dir}/filtered_htns_200_{dataset_type}.csv.gz"
+    removed_path = f"{output_dir}/removed_htns_200_{dataset_type}.csv.gz"
 
     print("Filtering sentences ...")
     tokenizing_filter(input_path, output_path, removed_path, dic="jumanpp")
