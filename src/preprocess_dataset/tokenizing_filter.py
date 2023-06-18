@@ -46,13 +46,13 @@ def tokenizing_filter(input_path: str, output_path: str, removed_path: str, dic=
 
             for i, row in enumerate(reader):
                 sentences = eval(row[-1])
-                if dic == "jumanpp":
-                    tokenized_head = tokenize_juman(row[1])
-                    tokenized_tail = tokenize_juman(row[2])
+                if tokenizer_type == "jumanpp":
+                    tokenized_head = tokenize_juman(row[0])
+                    tokenized_tail = tokenize_juman(row[1])
                     tokenized_sentences = map(tokenize_juman, sentences)
-                elif dic in ["ipadic", "neologd"]:
-                    tokenized_head = tokenize_mecab(row[1])
-                    tokenized_tail = tokenize_mecab(row[2])
+                elif tokenizer_type == ["mecab"]:
+                    tokenized_head = tokenize_mecab(row[0])
+                    tokenized_tail = tokenize_mecab(row[1])
                     tokenized_sentences = map(tokenize_mecab, sentences)
 
                 search_targets = [*tokenized_head, *tokenized_tail]
