@@ -8,7 +8,7 @@ import sys
 def clean_sentences(input_path: str, output_path: str, err_path: str):
     with gzip.open(input_path, 'rt') as rf, \
         gzip.open(output_path, 'wt') as wf, \
-        open(err_path, 'w') as ef:
+        gzip.open(err_path, 'wt') as ef:
         reader = csv.reader(rf)
         writer = csv.writer(wf)
         err_writer = csv.writer(ef)
