@@ -9,7 +9,7 @@ def extract_sentences(
         over_path: str,
         corpus: list,
         conceptnet: list,
-        extract_limit: int = 1000000) -> None:
+        extract_limit: int = 200000) -> None:
     with gzip.open(output_path, "wt") as f, gzip.open(over_path, "wt") as f_over:
         writer = csv.writer(f)
         writer_over = csv.writer(f_over)
