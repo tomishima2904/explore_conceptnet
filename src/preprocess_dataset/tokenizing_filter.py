@@ -72,8 +72,8 @@ def tokenizing_filter(input_path: str, output_path: str, removed_path: str, dic=
                 removed_writer.writerow([*row[:-1], removed_sentences])
 
                 if i % 100 == 0:
-                    sys.stdout.flush() # 明示的にflush
                     print(f"{datetime.datetime.now()}: {i} lines have been processed.")
+                    sys.stdout.flush() # 明示的にflush
 
 
 if __name__ == "__main__":

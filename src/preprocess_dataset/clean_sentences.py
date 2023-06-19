@@ -26,8 +26,8 @@ def clean_sentences(input_path: str, output_path: str, err_path: str):
                     err_writer.writerow([i+1, *data])
 
             if i % 100 == 0:
-                sys.stdout.flush() # 明示的にflush
                 print(f"{datetime.datetime.now()}: {i} lines have been processed.")
+                sys.stdout.flush() # 明示的にflush
     print(f"Successfully dumped {output_path} !")
 
 

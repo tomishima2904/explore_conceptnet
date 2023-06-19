@@ -37,8 +37,8 @@ def extract_sentences(
                 writer_over.writerow(data)
 
             if i % 100 == 0:
-                sys.stdout.flush() # 明示的にflush
                 print(f"{datetime.datetime.now()}: {i} triplets have been processed.")
+                sys.stdout.flush() # 明示的にflush
     print(f"Successfully dumped {output_path} !")
 
 
