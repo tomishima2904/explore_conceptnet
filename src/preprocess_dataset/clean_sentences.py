@@ -5,6 +5,7 @@ import sys
 
 
 # 抽出文がないものを除外し、文末の改行コードを除去
+# TODO: [h, t, n, s]での出力 & nをキーに降順にソート
 def clean_sentences(input_path: str, output_path: str, err_path: str):
     with gzip.open(input_path, 'rt') as rf, \
         gzip.open(output_path, 'wt') as wf, \

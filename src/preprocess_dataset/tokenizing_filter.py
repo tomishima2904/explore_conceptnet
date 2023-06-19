@@ -40,7 +40,7 @@ def _check_all_elements(targets: list, sentence: list):
     return all(target in sentence for target in targets)
 
 
-def tokenizing_filter(input_path: str, output_path: str, removed_path: str, dic="jumanpp"):
+def tokenizing_filter(input_path: str, output_path: str, removed_path: str, tokenizer_type="jumanpp"):
     with gzip.open(output_path, 'wt') as wf, gzip.open(removed_path, 'wt') as removed_f:
         writer = csv.writer(wf)
         removed_writer = csv.writer(removed_f)
@@ -84,11 +84,11 @@ if __name__ == "__main__":
     dataset_type = "1"
     input_dir = "datasets/rel_gen/cleaned_rhts"
     input_path = f"{input_dir}/cleaned_htns_200_{dataset_type}.csv.gz"
-    output_dir = f"datasets/rel_gen/{dic}_htns"
+    output_dir = f"datasets/rel_gen/{tokenizer_type}_htns"
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
     output_path = f"{output_dir}/filtered_htns_200_{dataset_type}.csv.gz"
     removed_path = f"{output_dir}/removed_htns_200_{dataset_type}.csv.gz"
 
     print("Filtering sentences ...")
-    tokenizing_filter(input_path, output_path, removed_path, dic="jumanpp")
+    tokenizing_filter(input_path, output_path, removed_path, tokenizer_type="jumanpp")
