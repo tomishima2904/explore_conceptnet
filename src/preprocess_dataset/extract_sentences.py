@@ -6,11 +6,13 @@ import sys
 
 def extract_sentences(
         output_path: str,
+        over_path: str,
         corpus: list,
         conceptnet: list,
-        num_extract: int = 5) -> None:
-    with gzip.open(output_path, "wt") as f:
+        extract_limit: int = 200000) -> None:
+    with gzip.open(output_path, "wt") as f, gzip.open(over_path, "wt") as f_over:
         writer = csv.writer(f)
+        writer_over = csv.writer(f_over)
         print(f"{datetime.datetime.now()}: Start")
         sys.stdout.flush()
 
@@ -22,15 +24,21 @@ def extract_sentences(
             for sentence in corpus:
                 if head in sentence and tail in sentence:
                     sentences.append(sentence)
-                    # if len(sentences) == num_extract:
-                    #     break
+                    if len(sentences) == extract_limit:
+                        break
 
-            data = (row[0], head, tail, sentences)
-            writer.writerow(data)
+            num_sentences = len(sentences)
+            data = (head, tail, num_sentences, sentences)
+
+            # 抽出文の総数があまりにも多い場合は別のファイルへ出力
+            if num_sentences < extract_limit:
+                writer.writerow(data)
+            else:
+                writer_over.writerow(data)
 
             if i % 100 == 0:
-                sys.stdout.flush() # 明示的にflush
                 print(f"{datetime.datetime.now()}: {i} triplets have been processed.")
+                sys.stdout.flush() # 明示的にflush
     print(f"Successfully dumped {output_path} !")
 
 
@@ -62,10 +70,12 @@ if __name__ == "__main__":
     #     corpus = f.readlines()
 
     output_dir = "datasets/rel_gen/origin_rhts"
-    output_corpus_path = f"{output_dir}/origin_rhts_200_{dataset_type}.csv.gz"
+    output_corpus_path = f"{output_dir}/origin_htns_200_{dataset_type}.csv.gz"
+    output_over_path = f"{output_dir}/origin_htns_200_{dataset_type}_over.csv.gz"
 
     print("Extracting sentences ...")
     extract_sentences(output_path=output_corpus_path,
+                      over_path=output_over_path,
                       corpus=corpus,
                       conceptnet=conceptnet)
 

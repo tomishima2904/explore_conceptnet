@@ -5,10 +5,11 @@ import sys
 
 
 # 抽出文がないものを除外し、文末の改行コードを除去
+# TODO: [h, t, n, s]での出力 & nをキーに降順にソート
 def clean_sentences(input_path: str, output_path: str, err_path: str):
     with gzip.open(input_path, 'rt') as rf, \
         gzip.open(output_path, 'wt') as wf, \
-        open(err_path, 'w') as ef:
+        gzip.open(err_path, 'wt') as ef:
         reader = csv.reader(rf)
         writer = csv.writer(wf)
         err_writer = csv.writer(ef)
@@ -26,8 +27,8 @@ def clean_sentences(input_path: str, output_path: str, err_path: str):
                     err_writer.writerow([i+1, *data])
 
             if i % 100 == 0:
-                sys.stdout.flush() # 明示的にflush
                 print(f"{datetime.datetime.now()}: {i} lines have been processed.")
+                sys.stdout.flush() # 明示的にflush
     print(f"Successfully dumped {output_path} !")
 
 
@@ -41,6 +42,7 @@ if __name__ == "__main__":
     input_path = f"{input_dir}/origin_rhts_200_{dataset_type}.csv.gz"
     output_dir = "datasets/rel_gen/cleaned_rhts"
     output_path = f"{output_dir}/cleaned_rhts_200_{dataset_type}.csv.gz"
+    err_path = f"{output_dir}/cleaned_rhts_200_{dataset_type}_error.csv.gz"
 
     print("Cleaning sentences ...")
-    clean_sentences(input_path, output_path=output_path)
+    clean_sentences(input_path, output_path=output_path, err_path=err_path)
