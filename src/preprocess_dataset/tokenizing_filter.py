@@ -3,6 +3,9 @@ import gzip
 import datetime
 import sys
 import os
+import time
+import logzero
+from logzero import logger
 
 
 tokenizer_type = "jumanpp"
@@ -71,11 +74,9 @@ def tokenizing_filter(input_path: str, output_path: str, removed_path: str, toke
                 writer.writerow([row[0], row[1], len(filtered_sentences), filtered_sentences])
                 removed_writer.writerow([row[0], row[1], len(removed_sentences), removed_sentences])
 
-                if i % 100 == 0:
-                    print(f"{datetime.datetime.now()}: {i} lines have been processed.")
-                    sys.stdout.flush() # 明示的にflush
+                logger.info(f"{i} {row[0]} {row[1]}")
 
-    print(f"Successfully dumped {output_path} !")
+    logger.info(f"Successfully dumped {output_path} !")
 
 
 if __name__ == "__main__":
@@ -85,13 +86,20 @@ if __name__ == "__main__":
 
     dataset_type = "1"
     input_dir = "datasets/rel_gen/cleaned_rhts"
-    input_path = f"{input_dir}/cleaned_htns_200_{dataset_type}.csv.gz"
+    input_path = f"{input_dir}/cleaned_htns_200_{dataset_type}_ascending.csv.gz"
     output_dir = f"datasets/rel_gen/{tokenizer_type}_htns"
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
-    output_path = f"{output_dir}/filtered_htns_200_{dataset_type}.csv.gz"
-    removed_path = f"{output_dir}/removed_htns_200_{dataset_type}.csv.gz"
+    output_path = f"{output_dir}/filtered_htns_200_{dataset_type}_1.csv.gz"
+    removed_path = f"{output_dir}/removed_htns_200_{dataset_type}_1.csv.gz"
 
-    print(f"{datetime.datetime.now()}: Filtering sentences ...")
-    sys.stdout.flush() # 明示的にflush
+    # loggingを設定
+    t_delta = datetime.timedelta(hours=9)
+    JST = datetime.timezone(t_delta, 'JST')
+    now = datetime.datetime.now(JST)
+    date_time = now.strftime('%y%m%d%H%M%S')
+    log_path = f"logs/{date_time}_{tokenizer_type}_{dataset_type}_1.log"
+    logzero.logfile(log_path)
+
+    logger.info(f"Filtering sentences ...")
     tokenizing_filter(input_path, output_path, removed_path, tokenizer_type="jumanpp")
