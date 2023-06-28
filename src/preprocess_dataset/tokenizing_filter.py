@@ -39,7 +39,7 @@ def tokenize_juman(text:str) -> list:
 
 
 # 全てのターゲットトークンが対象の文に含まれていればTrueを返す
-def _check_all_elements(targets: list, sentence: list):
+def _is_all_targets_in_sentence(targets: list, sentence: list) -> bool:
     return all(target in sentence for target in targets)
 
 
@@ -66,15 +66,17 @@ def tokenizing_filter(input_path: str, output_path: str, removed_path: str, toke
                 removed_sentences = []
 
                 for j, tokenized_sentence in enumerate(tokenized_sentences):
-                    if _check_all_elements(search_target_tokens, tokenized_sentence):
+                    if _is_all_targets_in_sentence(search_target_tokens, tokenized_sentence):
                         filtered_sentences.append(sentences[j])
                     else:
                         removed_sentences.append(sentences[j])
+                    if j % 1000 == 999:
+                        logger.info(f"{i} {j}/{row[2]} {row[0]} {row[1]} +")
 
                 writer.writerow([row[0], row[1], len(filtered_sentences), filtered_sentences])
                 removed_writer.writerow([row[0], row[1], len(removed_sentences), removed_sentences])
 
-                logger.info(f"{i} {row[0]} {row[1]}")
+                logger.info(f"{i} {row[0]} {row[1]} all done")
 
     logger.info(f"Successfully dumped {output_path} !")
 
