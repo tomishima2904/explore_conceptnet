@@ -65,6 +65,7 @@ def dump_result(output_path, output_texts, sample_words):
         writer = csv.writer(f)
         for pair, text in zip(sample_words, output_texts):
             writer.writerow([pair[0], pair[1], text])
+    logger.info(f"Successfully dumped {output_path} !")
 
 
 input_dir = "datasets/連想語頻度表/pairs"
@@ -84,4 +85,4 @@ output_dir = "results/ja/連想語頻度表/text_generation"
 output_path = f"{output_dir}/{date_time}.csv"
 dump_result(output_path, output_texts, sample_pairs)
 
-logger.infor("All done")
+logger.info("All done")
