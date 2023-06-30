@@ -92,15 +92,15 @@ if __name__ == "__main__":
     output_dir = f"datasets/rel_gen/{tokenizer_type}_htns"
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
-    output_path = f"{output_dir}/filtered_htns_200_{dataset_type}_1.csv.gz"
-    removed_path = f"{output_dir}/removed_htns_200_{dataset_type}_1.csv.gz"
+    output_path = f"{output_dir}/filtered_htns_200_{dataset_type}.csv.gz"
+    removed_path = f"{output_dir}/removed_htns_200_{dataset_type}.csv.gz"
 
     # loggingを設定
     t_delta = datetime.timedelta(hours=9)
     JST = datetime.timezone(t_delta, 'JST')
     now = datetime.datetime.now(JST)
     date_time = now.strftime('%y%m%d%H%M%S')
-    log_path = f"logs/{date_time}_{tokenizer_type}_{dataset_type}_1.log"
+    log_path = f"logs/{date_time}_{tokenizer_type}_{dataset_type}.log"
     logzero.logfile(log_path)
 
     logger.info(f"Filtering sentences ...")
