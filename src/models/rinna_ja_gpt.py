@@ -36,12 +36,16 @@ def generate_text(encoded_texts):
                 temperature=0.8,
                 pad_token_id=tokenizer.pad_token_id,
                 bos_token_id=tokenizer.bos_token_id,
-                eos_token_id=tokenizer.eos_token_id
+                eos_token_id=tokenizer.eos_token_id,
+                num_return_sequences=3,
             )
             output_ids_list.append(output_ids)
             logger.info(f"{i} sentences have been processed")
 
-    output_texts = [tokenizer.decode(output_ids.tolist()[0]) for output_ids in output_ids_list]
+    # モデルからの出力をデコード
+    output_texts = [[tokenizer.decode(output_sentence)
+                     for output_sentence in output_sentences]
+                    for output_sentences in output_ids_list]
     return output_texts
 
 
