@@ -52,7 +52,7 @@ def generate_text(encoded_texts: list) -> list:
                 num_return_sequences=3,
             )
             output_ids_list.append(output_ids)
-            logger.info(f"{i}/{len(encoded_texts)}")
+            logger.info(f"{i+1}/{len(encoded_texts)}")
 
     # モデルからの出力をデコード
     output_texts = []
@@ -83,7 +83,13 @@ with gzip.open(input_path, 'rt') as f:
 
 sample_pairs = [row for row in all_data if row[2]>2]
 only_word_pairs = [[*row[:2]] for row in sample_pairs]
-input_texts = [f"「{row[0]}」と「{row[1]}」の関係性は、" for row in sample_pairs]
+
+template_dir = "datasets/連想語頻度表/templates"
+template_path = f"{template_dir}/hte2.txt"
+logger.info(f"Template: {template_path}")
+with open(template_path, "r", encoding="utf-8") as f:
+    template = f.read()
+input_texts = [f"{template}「{row[0]}」、「{row[1]}」:" for row in sample_pairs]
 
 encoded_texts = [tokenizer.encode(text, add_special_tokens=False, return_tensors="pt") for text in input_texts]
 output_texts = generate_text(encoded_texts)
