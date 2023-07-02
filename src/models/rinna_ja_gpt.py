@@ -55,9 +55,15 @@ def generate_text(encoded_texts: list) -> list:
             logger.info(f"{i}/{len(encoded_texts)}")
 
     # モデルからの出力をデコード
-    output_texts = [[tokenizer.decode(output_sentence)
-                     for output_sentence in output_sentences]
-                    for output_sentences in output_ids_list]
+    output_texts = []
+    for output_sentences in output_ids_list:
+        output_texts_per_sequence = []
+        for output_sentence in output_sentences:
+            # [PAD]トークンを除外
+            filtered_output = [token for token in output_sentence if token != tokenizer.pad_token_id]
+            decoded_output = tokenizer.decode(filtered_output)
+            output_texts_per_sequence.append(decoded_output)
+        output_texts.append(output_texts_per_sequence)
     return output_texts
 
 
