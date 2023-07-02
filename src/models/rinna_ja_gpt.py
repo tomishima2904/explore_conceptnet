@@ -27,6 +27,7 @@ logzero.logfile(log_path)
 logger.info("Loading model ...")
 tokenizer = AutoTokenizer.from_pretrained("rinna/japanese-gpt-neox-3.6b", use_fast=False)
 model = AutoModelForCausalLM.from_pretrained("rinna/japanese-gpt-neox-3.6b")
+model.eval()
 
 if torch.cuda.is_available():
     model = model.to("cuda")
