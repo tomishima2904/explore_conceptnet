@@ -6,6 +6,8 @@ import gzip
 import json
 import logzero
 from logzero import logger
+from typing import Any, Dict, Optional, List, Union
+import os
 
 from src.utils.file_handlers import get_12chars_datetime
 
@@ -19,9 +21,14 @@ class TextGenerationModel(object):
     def __init__(self,
                  tokenizer:str="rinna/japanese-gpt-neox-3.6b",
                  model:str="rinna/japanese-gpt-neox-3.6b") -> None:
-        # ロギングの設定
+        # 出力結果保存用ディレクトリの設定
         self.date_time = get_12chars_datetime()
-        log_path = f"logs/{self.date_time}.log"
+        self.result_dir = f"results/ja/連想語頻度表/text_generation/{self.date_time}"
+        if not os.path.isdir(self.result_dir):
+            os.makedirs(self.result_dir)
+
+        # ロギングの設定
+        log_path = f"{self.result_dir}/{self.date_time}.log"
         logzero.logfile(log_path)
 
         # シード値を固定
@@ -43,18 +50,18 @@ class TextGenerationModel(object):
         self.model.eval()
 
         if torch.cuda.is_available():
-            self.model = self.model.to("cuda")
+            self.model = self.model.to("cuda:0")
         logger.info(f"Device: {self.model.device}")
 
 
-    def encode_texts(self, texts: list):
+    def encode_texts(self, texts: List[str]):
         return [self.tokenizer.encode(text,
                                       add_special_tokens=False,
                                       return_tensors="pt").to(self.model.device)
                 for text in texts]
 
 
-    def generate_texts(self, encoded_texts: list, num_return_sequences=3) -> list:
+    def generate_texts(self, encoded_texts: List[torch.Tensor], num_return_sequences=3) -> list:
         """ GPTでテキスト生成
         encoded_texts: [torch.Tensor] -> [str]
         """
@@ -84,7 +91,10 @@ class TextGenerationModel(object):
         return output_texts
 
 
-    def dump_result(self, output_path:str, output_texts:list, sample_words:list):
+    def dump_result(self, output_file:str,
+                    output_texts:List[str],
+                    sample_words:List[List[str]]):
+        output_path = f"{self.result_dir}/{output_file}"
         with open(output_path, 'w') as f:
             writer = csv.writer(f)
             for pair, text in zip(sample_words, output_texts):
@@ -134,14 +144,13 @@ if __name__ == "__main__":
     encoded_texts = text_generation_model.encode_texts(input_texts)
     output_texts = text_generation_model.generate_texts(encoded_texts)
 
-    output_dir = "results/ja/連想語頻度表/text_generation"
     if model == "rinna/japanese-gpt-neox-3.6b":
         model_type = "rinna3.6b"
     elif model == "cyberagent/open-calm-7b":
         model_type = "calm7b"
     else:
         model_type = "else"
-    output_path = f"{output_dir}/{text_generation_model.date_time}_{model_type}_{template_name}.csv"
-    text_generation_model.dump_result(output_path, output_texts, sample_pairs)
+    output_file = f"{model_type}_{template_name}.csv"
+    text_generation_model.dump_result(output_file, output_texts, sample_pairs)
 
     logger.info("All done")
