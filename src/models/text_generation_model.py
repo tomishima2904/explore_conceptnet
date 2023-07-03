@@ -54,51 +54,56 @@ class TextGenerationModel(object):
         logger.info(f"Device: {self.model.device}")
 
 
-    def encode_texts(self, texts: List[str]):
+    def _encode_texts(self, texts: List[str]):
         return [self.tokenizer.encode(text,
                                       add_special_tokens=False,
                                       return_tensors="pt").to(self.model.device)
                 for text in texts]
 
 
-    def generate_texts(self, encoded_texts: List[torch.Tensor], num_return_sequences=3) -> list:
-        """ GPTでテキスト生成
-        encoded_texts: [torch.Tensor] -> [str]
-        """
+    def generate_and_dump(self,
+                          sample_data: List[str],
+                          template: str,
+                          output_path: str,
+                          num_return_sequences=3):
+
+        # 入力用テキストの作成
+        input_texts: List[str] = []
+        for row in sample_data:
+            input_text = template
+            if "{words_set}" in input_text:
+                words_set = f"{row[0]}, {row[1]}"
+                input_text = input_text.replace("{words_set}", words_set)
+            if "{references}" in input_text:
+                references = [f"- {ref}" for i, ref in enumerate(row[-1])]
+                input_text = input_text.replace("{references}", "\n".join(references)[:3])
+            input_text = input_text.replace("{input_slot}", input_text)
+            input_texts.append(input_text)
+
+        # encode
+        encoded_texts = text_generation_model._encode_texts(input_texts)
+
+        # テキスト生成 & 1サンプルごとにファイル出力
         logger.info(f"Number of return sequences: {num_return_sequences}")
-        with torch.no_grad():
-            output_ids_list = []
-            for i, encoded_text in enumerate(encoded_texts):
-                output_ids = self.model.generate(
-                    encoded_text,
-                    max_new_tokens=100,
-                    min_new_tokens=5,
-                    do_sample=True,
-                    temperature=0.8,
-                    pad_token_id=self.tokenizer.pad_token_id,
-                    bos_token_id=self.tokenizer.bos_token_id,
-                    eos_token_id=self.tokenizer.eos_token_id,
-                    num_return_sequences=num_return_sequences,
-                )
-                output_ids_list.append(output_ids)
-                logger.info(f"{i+1}/{len(encoded_texts)}")
-
-        # モデルからの出力をデコード
-        output_texts = []
-        for output_ids in output_ids_list:
-            output_text = list(map(lambda token: self.tokenizer.decode(token, skip_special_tokens=True), output_ids))
-            output_texts.append(output_text)
-        return output_texts
-
-
-    def dump_result(self, output_file:str,
-                    output_texts:List[str],
-                    sample_words:List[List[str]]):
-        output_path = f"{self.result_dir}/{output_file}"
         with open(output_path, 'w') as f:
             writer = csv.writer(f)
-            for pair, text in zip(sample_words, output_texts):
-                writer.writerow([pair[0], pair[1], text])
+            with torch.no_grad():
+                for i, (sample, encoded_text) in enumerate(zip(sample_data, encoded_texts)):
+                    output_ids = self.model.generate(
+                        encoded_text,
+                        max_new_tokens=100,
+                        min_new_tokens=5,
+                        do_sample=True,
+                        temperature=0.8,
+                        pad_token_id=self.tokenizer.pad_token_id,
+                        bos_token_id=self.tokenizer.bos_token_id,
+                        eos_token_id=self.tokenizer.eos_token_id,
+                        num_return_sequences=num_return_sequences,
+                    )
+                    output_text = list(map(lambda token: self.tokenizer.decode(token, skip_special_tokens=True), output_ids))
+                    writer.writerow([*sample[:2], output_text])
+                    logger.info(f"{i+1}/{len(encoded_texts)}")
+
         logger.info(f"Successfully dumped {output_path} !")
 
 
@@ -118,7 +123,11 @@ if __name__ == "__main__":
 
     # 使用するデータをサンプリング
     sample_data = [row for row in all_data if row[2]>2]
-    sample_pairs = [[*row[:2]] for row in sample_data]
+    """sample_data
+    head: str
+    tail: str
+    sentences: List[str]
+    """
 
     # プロンプト入力用のテンプレートを読み込む
     template_dir = "datasets/連想語頻度表/templates"
@@ -126,31 +135,17 @@ if __name__ == "__main__":
     template_path = f"{template_dir}/{template_name}.json"
     logger.info(f"Template: {template_path}")
     with open(template_path, "r", encoding="utf-8") as f:
-        template = json.load(f)["prompt_input"]
+            template = json.load(f)["prompt_input"]
 
-    # 入力用テキストの作成
-    input_texts = []
-    for row in sample_data:
-        input_text = template
-        if "{words_set}" in input_text:
-            words_set = f"{row[0]}, {row[1]}"
-            input_text = input_text.replace("{words_set}", words_set)
-        if "{references}" in input_text:
-            references = [f"- {ref}" for i, ref in enumerate(row[-1])]
-            input_text = input_text.replace("{references}", "\n".join(references))
-        input_text = input_text.replace("{input_slot}", input_text)
-        input_texts.append(input_text)
-
-    encoded_texts = text_generation_model.encode_texts(input_texts)
-    output_texts = text_generation_model.generate_texts(encoded_texts)
-
+    # 出力ファイル名を命名
     if model == "rinna/japanese-gpt-neox-3.6b":
         model_type = "rinna3.6b"
     elif model == "cyberagent/open-calm-7b":
         model_type = "calm7b"
     else:
         model_type = "else"
-    output_file = f"{model_type}_{template_name}.csv"
-    text_generation_model.dump_result(output_file, output_texts, sample_pairs)
+    output_path = f"{text_generation_model.result_dir}/{model_type}_{template_name}.csv"
+
+    text_generation_model.generate_and_dump(sample_data, template, output_path)
 
     logger.info("All done")
