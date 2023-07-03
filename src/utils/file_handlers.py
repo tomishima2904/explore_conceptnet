@@ -94,7 +94,7 @@ def makedirs(path: str):
         os.makedirs(path)
 
 
-def get_8char_datetime() -> str:
+def get_12chars_datetime() -> str:
     t_delta = datetime.timedelta(hours=9)
     JST = datetime.timezone(t_delta, 'JST')
     now = datetime.datetime.now(JST)
