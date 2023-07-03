@@ -3,12 +3,11 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, set_seed
 
 import csv
 import gzip
-import datetime
-from tqdm import tqdm
+import json
 import logzero
 from logzero import logger
 
-from src.utils.file_handlers import get_8char_datetime
+from src.utils.file_handlers import get_12chars_datetime
 
 
 # 読み込めるcsvファイルの大きさを増大
