@@ -84,8 +84,7 @@ class TextGenerationModel(object):
         return output_texts
 
 
-    def dump_result(self, output_dir:str, output_texts:list, sample_words:list):
-        output_path = f"{output_dir}/{self.date_time}.csv"
+    def dump_result(self, output_path:str, output_texts:list, sample_words:list):
         with open(output_path, 'w') as f:
             writer = csv.writer(f)
             for pair, text in zip(sample_words, output_texts):
@@ -108,12 +107,13 @@ if __name__ == "__main__":
         all_data = [[*row[:2], int(row[2]), eval(row[-1])] for row in reader]
 
     # 使用するデータをサンプリング
-    sample_data = [row for row in all_data if row[2]>2][:3]
+    sample_data = [row for row in all_data if row[2]>2]
     sample_pairs = [[*row[:2]] for row in sample_data]
 
     # プロンプト入力用のテンプレートを読み込む
     template_dir = "datasets/連想語頻度表/templates"
-    template_path = f"{template_dir}/one-shot_no_refs.json"
+    template_name = "one-shot_no_refs"
+    template_path = f"{template_dir}/{template_name}.json"
     logger.info(f"Template: {template_path}")
     with open(template_path, "r", encoding="utf-8") as f:
         template = json.load(f)["prompt_input"]
@@ -135,6 +135,13 @@ if __name__ == "__main__":
     output_texts = text_generation_model.generate_texts(encoded_texts)
 
     output_dir = "results/ja/連想語頻度表/text_generation"
-    text_generation_model.dump_result(output_dir, output_texts, sample_pairs)
+    if model == "rinna/japanese-gpt-neox-3.6b":
+        model_type = "rinna3.6b"
+    elif model == "cyberagent/open-calm-7b":
+        model_type = "calm7b"
+    else:
+        model_type = "else"
+    output_path = f"{output_dir}/{text_generation_model.date_time}_{model_type}_{template_name}.csv"
+    text_generation_model.dump_result(output_path, output_texts, sample_pairs)
 
     logger.info("All done")
