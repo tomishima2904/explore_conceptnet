@@ -15,8 +15,10 @@ gb_to_bytes = 20 * 1024 * 1024 * 1024
 csv.field_size_limit(gb_to_bytes)
 
 
-class RinnaJapaneseGpt(object):
-    def __init__(self) -> None:
+class TextGenerationModel(object):
+    def __init__(self,
+                 tokenizer:str="rinna/japanese-gpt-neox-3.6b",
+                 model:str="rinna/japanese-gpt-neox-3.6b") -> None:
         # ロギングの設定
         self.date_time = get_12chars_datetime()
         log_path = f"logs/{self.date_time}.log"
@@ -26,9 +28,17 @@ class RinnaJapaneseGpt(object):
         set_seed(19990429)
 
         # トークナイザーおよびモデルの読み込み
-        logger.info("Loading model ...")
-        self.tokenizer = AutoTokenizer.from_pretrained("rinna/japanese-gpt-neox-3.6b", use_fast=False)
-        self.model = AutoModelForCausalLM.from_pretrained("rinna/japanese-gpt-neox-3.6b")
+        logger.info(f"Tokenizer: {tokenizer}")
+        logger.info(f"Model: {model}")
+        if model == "rinna/japanese-gpt-neox-3.6b":  # https://huggingface.co/rinna/japanese-gpt-neox-3.6b
+            self.tokenizer = AutoTokenizer.from_pretrained(tokenizer, use_fast=False)
+            self.model = AutoModelForCausalLM.from_pretrained(model)
+        elif model == "cyberagent/open-calm-7b":  # https://huggingface.co/cyberagent/open-calm-7b
+            self.tokenizer = AutoTokenizer.from_pretrained("cyberagent/open-calm-7b")
+            self.model = AutoModelForCausalLM.from_pretrained("cyberagent/open-calm-7b", device_map="auto", torch_dtype=torch.float16)
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(tokenizer)
+            self.model = AutoModelForCausalLM.from_pretrained(model)
         self.model.eval()
 
         if torch.cuda.is_available():
@@ -88,7 +98,9 @@ class RinnaJapaneseGpt(object):
 
 if __name__ == "__main__":
 
-    rinna_ja_gpt = RinnaJapaneseGpt()
+    tokenizer = "rinna/japanese-gpt-neox-3.6b"
+    model = "rinna/japanese-gpt-neox-3.6b"
+    text_generation_model = TextGenerationModel(tokenizer, model)
 
     # 刺激語と連想語と抽出文数と抽出文からなるデータを読み込む
     input_dir = "datasets/連想語頻度表/pairs"
@@ -103,7 +115,7 @@ if __name__ == "__main__":
 
     # プロンプト入力用のテンプレートを読み込む
     template_dir = "datasets/連想語頻度表/templates"
-    template_path = f"{template_dir}/zero-shot_no_refs.json"
+    template_path = f"{template_dir}/one-shot_no_refs.json"
     logger.info(f"Template: {template_path}")
     with open(template_path, "r", encoding="utf-8") as f:
         template = json.load(f)["prompt_input"]
@@ -116,15 +128,15 @@ if __name__ == "__main__":
             words_set = f"{row[0]}, {row[1]}"
             input_text = input_text.replace("{words_set}", words_set)
         if "{references}" in input_text:
-            references = [f"{i+1}. {ref}" for i, ref in enumerate(row[-1])]
+            references = [f"- {ref}" for i, ref in enumerate(row[-1])]
             input_text = input_text.replace("{references}", "\n".join(references))
         input_text = input_text.replace("{input_slot}", input_text)
         input_texts.append(input_text)
 
-    encoded_texts = rinna_ja_gpt.encode_texts(input_texts)
-    output_texts = rinna_ja_gpt.generate_texts(encoded_texts)
+    encoded_texts = text_generation_model.encode_texts(input_texts)
+    output_texts = text_generation_model.generate_texts(encoded_texts)
 
     output_dir = "results/ja/連想語頻度表/text_generation"
-    rinna_ja_gpt.dump_result(output_dir, output_texts, sample_pairs)
+    text_generation_model.dump_result(output_dir, output_texts, sample_pairs)
 
     logger.info("All done")
