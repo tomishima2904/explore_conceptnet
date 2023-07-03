@@ -56,6 +56,7 @@ class TextGenerationModel(object):
         """ GPTでテキスト生成
         encoded_texts: [torch.Tensor] -> [str]
         """
+        logger.info(f"Number of return sequences: {num_return_sequences}")
         with torch.no_grad():
             output_ids_list = []
             for i, encoded_text in enumerate(encoded_texts):
@@ -75,15 +76,9 @@ class TextGenerationModel(object):
 
         # モデルからの出力をデコード
         output_texts = []
-        for output_sentences in output_ids_list:
-            output_texts_per_sequence = []
-            for output_sentence in output_sentences:
-                # [PAD]トークンを除外
-                filtered_output = [token for token in output_sentence
-                                   if token != self.tokenizer.pad_token_id]
-                decoded_output = self.tokenizer.decode(filtered_output)
-                output_texts_per_sequence.append(decoded_output)
-            output_texts.append(output_texts_per_sequence)
+        for output_ids in output_ids_list:
+            output_text = list(map(lambda token: self.tokenizer.decode(token, skip_special_tokens=True), output_ids))
+            output_texts.append(output_text)
         return output_texts
 
 
@@ -105,6 +100,7 @@ if __name__ == "__main__":
     # 刺激語と連想語と抽出文数と抽出文からなるデータを読み込む
     input_dir = "datasets/連想語頻度表/pairs"
     input_path = f"{input_dir}/htns_200_best10_pairs.csv.gz"
+    logger.info(f"Dataset: {input_path}")
     with gzip.open(input_path, 'rt') as f:
         reader = csv.reader(f)
         all_data = [[*row[:2], int(row[2]), eval(row[-1])] for row in reader]
