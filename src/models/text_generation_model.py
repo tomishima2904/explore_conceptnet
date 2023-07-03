@@ -33,9 +33,10 @@ class TextGenerationModel(object):
         if model == "rinna/japanese-gpt-neox-3.6b":  # https://huggingface.co/rinna/japanese-gpt-neox-3.6b
             self.tokenizer = AutoTokenizer.from_pretrained(tokenizer, use_fast=False)
             self.model = AutoModelForCausalLM.from_pretrained(model)
+        # TODO: device_map="auto"
         elif model == "cyberagent/open-calm-7b":  # https://huggingface.co/cyberagent/open-calm-7b
             self.tokenizer = AutoTokenizer.from_pretrained("cyberagent/open-calm-7b")
-            self.model = AutoModelForCausalLM.from_pretrained("cyberagent/open-calm-7b", device_map="auto", torch_dtype=torch.float16)
+            self.model = AutoModelForCausalLM.from_pretrained("cyberagent/open-calm-7b", torch_dtype=torch.float16)
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(tokenizer)
             self.model = AutoModelForCausalLM.from_pretrained(model)
@@ -43,12 +44,13 @@ class TextGenerationModel(object):
 
         if torch.cuda.is_available():
             self.model = self.model.to("cuda")
+        logger.info(f"Device: {self.model.device}")
 
 
     def encode_texts(self, texts: list):
         return [self.tokenizer.encode(text,
                                       add_special_tokens=False,
-                                      return_tensors="pt")
+                                      return_tensors="pt").to(self.model.device)
                 for text in texts]
 
 
@@ -61,7 +63,7 @@ class TextGenerationModel(object):
             output_ids_list = []
             for i, encoded_text in enumerate(encoded_texts):
                 output_ids = self.model.generate(
-                    encoded_text.to(self.model.device),
+                    encoded_text,
                     max_new_tokens=100,
                     min_new_tokens=5,
                     do_sample=True,
