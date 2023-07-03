@@ -8,6 +8,7 @@ import logzero
 from logzero import logger
 from typing import Any, Dict, Optional, List, Union
 import os
+import argparse
 
 from src.utils.file_handlers import get_12chars_datetime
 
@@ -20,7 +21,8 @@ csv.field_size_limit(gb_to_bytes)
 class TextGenerationModel(object):
     def __init__(self,
                  tokenizer:str="rinna/japanese-gpt-neox-3.6b",
-                 model:str="rinna/japanese-gpt-neox-3.6b") -> None:
+                 model:str="rinna/japanese-gpt-neox-3.6b",
+                 device_type:str="cuda") -> None:
         # 出力結果保存用ディレクトリの設定
         self.date_time = get_12chars_datetime()
         self.result_dir = f"results/ja/連想語頻度表/text_generation/{self.date_time}"
@@ -50,7 +52,7 @@ class TextGenerationModel(object):
         self.model.eval()
 
         if torch.cuda.is_available():
-            self.model = self.model.to("cuda:0")
+            self.model = self.model.to(device_type)
         logger.info(f"Device: {self.model.device}")
 
 
@@ -108,16 +110,20 @@ class TextGenerationModel(object):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--device_type', type=str, default="cuda:0")
+    parser.add_argument('--input_path', type=str, default="datasets/連想語頻度表/pairs/htns_200_best10_pairs.csv.gz")
+    parser.add_argument('--model', type=str, default="rinna/japanese-gpt-neox-3.6b")
+    parser.add_argument('--template_dir', type=str, default="datasets/連想語頻度表/templates")
+    parser.add_argument('template_name', type=str)
+    parser.add_argument('--tokenizer', type=str, default="rinna/japanese-gpt-neox-3.6b")
+    args = parser.parse_args()
 
-    tokenizer = "rinna/japanese-gpt-neox-3.6b"
-    model = "rinna/japanese-gpt-neox-3.6b"
-    text_generation_model = TextGenerationModel(tokenizer, model)
+    text_generation_model = TextGenerationModel(args.tokenizer, args.model, args.device_type)
 
     # 刺激語と連想語と抽出文数と抽出文からなるデータを読み込む
-    input_dir = "datasets/連想語頻度表/pairs"
-    input_path = f"{input_dir}/htns_200_best10_pairs.csv.gz"
-    logger.info(f"Dataset: {input_path}")
-    with gzip.open(input_path, 'rt') as f:
+    logger.info(f"Dataset: {args.input_path}")
+    with gzip.open(args.input_path, 'rt') as f:
         reader = csv.reader(f)
         all_data = [[*row[:2], int(row[2]), eval(row[-1])] for row in reader]
 
@@ -130,21 +136,19 @@ if __name__ == "__main__":
     """
 
     # プロンプト入力用のテンプレートを読み込む
-    template_dir = "datasets/連想語頻度表/templates"
-    template_name = "one-shot_no_refs"
-    template_path = f"{template_dir}/{template_name}.json"
+    template_path = f"{args.template_dir}/{args.template_name}.json"
     logger.info(f"Template: {template_path}")
     with open(template_path, "r", encoding="utf-8") as f:
             template = json.load(f)["prompt_input"]
 
     # 出力ファイル名を命名
-    if model == "rinna/japanese-gpt-neox-3.6b":
+    if args.model == "rinna/japanese-gpt-neox-3.6b":
         model_type = "rinna3.6b"
-    elif model == "cyberagent/open-calm-7b":
+    elif args.model == "cyberagent/open-calm-7b":
         model_type = "calm7b"
     else:
         model_type = "else"
-    output_path = f"{text_generation_model.result_dir}/{model_type}_{template_name}.csv"
+    output_path = f"{text_generation_model.result_dir}/{model_type}_{args.template_name}.csv"
 
     text_generation_model.generate_and_dump(sample_data, template, output_path)
 
