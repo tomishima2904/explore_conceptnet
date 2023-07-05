@@ -67,6 +67,7 @@ class TextGenerationModel(object):
                           sample_data: List[str],
                           template: str,
                           output_path: str,
+                          num_refs=3,
                           num_return_sequences=3):
 
         # 入力用テキストの作成
@@ -78,7 +79,7 @@ class TextGenerationModel(object):
                 input_text = input_text.replace("{words_set}", words_set)
             if "{references}" in input_text:
                 references = [f"- {ref}" for i, ref in enumerate(row[-1])]
-                input_text = input_text.replace("{references}", "\n".join(references)[:3])
+                input_text = input_text.replace("{references}", "\n".join(references[:num_refs]))
             input_text = input_text.replace("{input_slot}", input_text)
             input_texts.append(input_text)
 
@@ -114,6 +115,7 @@ if __name__ == "__main__":
     parser.add_argument('--device_type', type=str, default="cuda:0")
     parser.add_argument('--input_path', type=str, default="datasets/連想語頻度表/pairs/htns_200_best10_pairs.csv.gz")
     parser.add_argument('--model', type=str, default="rinna/japanese-gpt-neox-3.6b")
+    parser.add_argument('--num_refs', type=int, default=3)
     parser.add_argument('--template_dir', type=str, default="datasets/連想語頻度表/templates")
     parser.add_argument('template_name', type=str)
     parser.add_argument('--tokenizer', type=str, default="rinna/japanese-gpt-neox-3.6b")
@@ -150,6 +152,7 @@ if __name__ == "__main__":
         model_type = "else"
     output_path = f"{text_generation_model.result_dir}/{model_type}_{args.template_name}.csv"
 
-    text_generation_model.generate_and_dump(sample_data, template, output_path)
+    logger.info(f"Number of references: {args.num_refs}")
+    text_generation_model.generate_and_dump(sample_data, template, output_path, args.num_refs)
 
     logger.info("All done")
