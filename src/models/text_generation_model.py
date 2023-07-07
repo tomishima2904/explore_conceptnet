@@ -69,14 +69,19 @@ class TextGenerationModel(object):
                           output_path: str,
                           num_refs=3,
                           num_return_sequences=3):
+        if "{references}" in template:
+            logger.info(f"Number of references: {num_refs}")
+        else:
+            logger.info(f"Number of references: 0")
 
         # 入力用テキストの作成
         input_texts: List[str] = []
         for row in sample_data:
             input_text = template
-            if "{words_set}" in input_text:
-                words_set = f"{row[0]}, {row[1]}"
-                input_text = input_text.replace("{words_set}", words_set)
+            if "{head}" in input_text:
+                input_text = input_text.replace("{head}", row[0])
+            if "{tail}" in input_text:
+                input_text = input_text.replace("{tail}", row[1])
             if "{references}" in input_text:
                 references = [f"- {ref}" for i, ref in enumerate(row[-1])]
                 input_text = input_text.replace("{references}", "\n".join(references[:num_refs]))
@@ -144,15 +149,8 @@ if __name__ == "__main__":
             template = json.load(f)["prompt_input"]
 
     # 出力ファイル名を命名
-    if args.model == "rinna/japanese-gpt-neox-3.6b":
-        model_type = "rinna3.6b"
-    elif args.model == "cyberagent/open-calm-7b":
-        model_type = "calm7b"
-    else:
-        model_type = "else"
-    output_path = f"{text_generation_model.result_dir}/{model_type}_{args.template_name}.csv"
+    output_path = f"{text_generation_model.result_dir}/generated_texts.csv"
 
-    logger.info(f"Number of references: {args.num_refs}")
+    # メイン
     text_generation_model.generate_and_dump(sample_data, template, output_path, args.num_refs)
-
     logger.info("All done")
