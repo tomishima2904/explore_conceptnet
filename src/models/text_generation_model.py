@@ -76,6 +76,7 @@ class TextGenerationModel(object):
 
         # 入力用テキストの作成
         input_texts: List[str] = []
+        all_references = []
         for row in sample_data:
             input_text = template
             if "{head}" in input_text:
@@ -85,6 +86,7 @@ class TextGenerationModel(object):
             if "{references}" in input_text:
                 references = [f"- {ref}" for i, ref in enumerate(row[-1])]
                 input_text = input_text.replace("{references}", "\n".join(references[:num_refs]))
+                all_references.append(references[:num_refs])
             input_text = input_text.replace("{input_slot}", input_text)
             input_texts.append(input_text)
 
@@ -109,7 +111,7 @@ class TextGenerationModel(object):
                         num_return_sequences=num_return_sequences,
                     )
                     output_text = list(map(lambda token: self.tokenizer.decode(token, skip_special_tokens=True), output_ids))
-                    writer.writerow([*sample[:2], output_text])
+                    writer.writerow([*sample[:-1], all_references[i], output_text])
                     logger.info(f"{i+1}/{len(encoded_texts)}")
 
         logger.info(f"Successfully dumped {output_path} !")
