@@ -64,7 +64,7 @@ class TextGenerationModel(object):
 
 
     def generate_and_dump(self,
-                          sample_data: List[str],
+                          sample_data: List[List],
                           template: str,
                           output_path: str,
                           num_refs=3,
@@ -91,7 +91,7 @@ class TextGenerationModel(object):
             input_texts.append(input_text)
 
         # encode
-        encoded_texts = text_generation_model._encode_texts(input_texts)
+        encoded_texts = self._encode_texts(input_texts)
 
         # テキスト生成 & 1サンプルごとにファイル出力
         logger.info(f"Number of return sequences: {num_return_sequences}")
@@ -101,7 +101,7 @@ class TextGenerationModel(object):
                 for i, (sample, encoded_text) in enumerate(zip(sample_data, encoded_texts)):
                     output_ids = self.model.generate(
                         encoded_text,
-                        max_new_tokens=100,
+                        max_new_tokens=50,
                         min_new_tokens=5,
                         do_sample=True,
                         temperature=0.8,
@@ -120,7 +120,7 @@ class TextGenerationModel(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--device_type', type=str, default="cuda:0")
-    parser.add_argument('--input_path', type=str, default="datasets/連想語頻度表/pairs/htns_200_best10_pairs.csv.gz")
+    parser.add_argument('--input_path', type=str, default="datasets/連想語頻度表/all/power_0.05/htrkpns_30_4exp.csv.gz")
     parser.add_argument('--model', type=str, default="rinna/japanese-gpt-neox-3.6b")
     parser.add_argument('--num_refs', type=int, default=3)
     parser.add_argument('--template_dir', type=str, default="datasets/連想語頻度表/templates")
@@ -134,13 +134,17 @@ if __name__ == "__main__":
     logger.info(f"Dataset: {args.input_path}")
     with gzip.open(args.input_path, 'rt') as f:
         reader = csv.reader(f)
-        all_data = [[*row[:2], int(row[2]), eval(row[-1])] for row in reader]
+        all_data = [[*row[:-2], int(row[-2]), eval(row[-1])] for row in reader]
 
     # 使用するデータをサンプリング
-    sample_data = [row for row in all_data if row[2]>2]
+    sample_data = [row for row in all_data]
     """sample_data
     head: str
     tail: str
+    relations: List[str]
+    k (rank): int
+    power: float
+    num_sentences: int
     sentences: List[str]
     """
 
