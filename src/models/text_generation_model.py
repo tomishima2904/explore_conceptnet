@@ -72,6 +72,7 @@ class TextGenerationModel(object):
         if "{references}" in template:
             logger.info(f"Number of references: {num_refs}")
         else:
+            assert num_refs == 0, f"Set {num_refs} as 0"
             logger.info(f"Number of references: 0")
 
         # 入力用テキストの作成
@@ -84,7 +85,7 @@ class TextGenerationModel(object):
             if "{tail}" in input_text:
                 input_text = input_text.replace("{tail}", row[1])
             if "{references}" in input_text:
-                references = [f"- {ref}" for i, ref in enumerate(row[-1])]
+                references = [f"・{ref}" for i, ref in enumerate(row[-1])]
                 input_text = input_text.replace("{references}", "\n".join(references[:num_refs]))
                 all_references.append(references[:num_refs])
             input_text = input_text.replace("{input_slot}", input_text)
@@ -101,7 +102,7 @@ class TextGenerationModel(object):
                 for i, (sample, encoded_text) in enumerate(zip(sample_data, encoded_texts)):
                     output_ids = self.model.generate(
                         encoded_text,
-                        max_new_tokens=50,
+                        max_new_tokens=42,
                         min_new_tokens=5,
                         do_sample=True,
                         temperature=0.8,
@@ -111,7 +112,10 @@ class TextGenerationModel(object):
                         num_return_sequences=num_return_sequences,
                     )
                     output_text = list(map(lambda token: self.tokenizer.decode(token, skip_special_tokens=True), output_ids))
-                    writer.writerow([*sample[:-1], all_references[i], output_text])
+                    if num_refs == 0:
+                        writer.writerow([*sample[:-1], output_text])
+                    else:
+                        writer.writerow([*sample[:-1], all_references[i], output_text])
                     logger.info(f"{i+1}/{len(encoded_texts)}")
 
         logger.info(f"Successfully dumped {output_path} !")
@@ -124,7 +128,7 @@ if __name__ == "__main__":
     parser.add_argument('--model', type=str, default="rinna/japanese-gpt-neox-3.6b")
     parser.add_argument('--num_refs', type=int, default=3)
     parser.add_argument('--template_dir', type=str, default="datasets/連想語頻度表/templates")
-    parser.add_argument('template_name', type=str)
+    parser.add_argument('--template_name', type=str, required=True)
     parser.add_argument('--tokenizer', type=str, default="rinna/japanese-gpt-neox-3.6b")
     args = parser.parse_args()
 
