@@ -35,6 +35,12 @@ def tokenize_mecab(text:str) -> list:
 
 
 def tokenize_juman(text:str) -> list:
+    if "# Нетвойне" in text:  # この文があると形態素解析がうまくいかない
+        logger.info(f"{text}")
+        return []
+    elif "doi:" in text:
+        logger.info(f"{text}")
+        return []
     return tokenizer.tokenize(text)
 
 
@@ -51,6 +57,11 @@ def tokenizing_filter(input_path: str, output_path: str, removed_path: str, toke
             reader = csv.reader(rf)
 
             for i, row in enumerate(reader):
+                # if i < 45961:
+                #     logger.info(f"{i} {row[0]} {row[1]} -")
+                #     continue
+                # if not [row[0], row[1]] in [['紹介', '話'], ['バー', 'ニューヨーク']]:
+                #     continue
                 sentences = eval(row[-1])
                 if tokenizer_type == "jumanpp":
                     tokenized_word1 = tokenize_juman(row[0])
