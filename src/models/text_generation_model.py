@@ -9,8 +9,10 @@ from logzero import logger
 from typing import Any, Dict, Optional, List, Union
 import os
 import argparse
+import random
 
 from src.utils.file_handlers import get_12chars_datetime
+from src.utils.result_formatter import result_formatter
 
 
 # 読み込めるcsvファイルの大きさを増大
@@ -22,10 +24,12 @@ class TextGenerationModel(object):
     def __init__(self,
                  tokenizer:str="rinna/japanese-gpt-neox-3.6b",
                  model:str="rinna/japanese-gpt-neox-3.6b",
-                 device_type:str="cuda") -> None:
+                 device_type:str="cuda",
+                 seed:int=19990429) -> None:
         # 出力結果保存用ディレクトリの設定
         self.date_time = get_12chars_datetime()
-        self.result_dir = f"results/ja/連想語頻度表/text_generation/{self.date_time}"
+        self.result_dir = f"results/ja/連想語頻度表/results/{self.date_time}"
+        self.result_dir = f"results/ja/連想語頻度表/validity/{seed}_{self.date_time}"
         if not os.path.isdir(self.result_dir):
             os.makedirs(self.result_dir)
 
@@ -34,7 +38,9 @@ class TextGenerationModel(object):
         logzero.logfile(log_path)
 
         # シード値を固定
-        set_seed(19990429)
+        logger.info(f"Seed: {seed}")
+        set_seed(seed)
+        random.seed(seed)
 
         # トークナイザーおよびモデルの読み込み
         logger.info(f"Tokenizer: {tokenizer}")
@@ -85,7 +91,10 @@ class TextGenerationModel(object):
             if "{tail}" in input_text:
                 input_text = input_text.replace("{tail}", row[1])
             if "{references}" in input_text:
-                references = [f"・{ref}" for i, ref in enumerate(row[-1])]
+                # invalid [0, 1, 2, 3] valid, v == -1: unlabled
+                # references = [f"・{ref}" for i, (ref, v) in enumerate(row[-1])]
+                references = [f"・{ref}" for i, (ref, v) in enumerate(row[-1]) if (int(v) == 1 or int(v) == 0)]
+                random.shuffle(references)
                 input_text = input_text.replace("{references}", "\n".join(references[:num_refs]))
                 all_references.append(references[:num_refs])
             input_text = input_text.replace("{input_slot}", input_text)
@@ -124,15 +133,16 @@ class TextGenerationModel(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--device_type', type=str, default="cuda:0")
-    parser.add_argument('--input_path', type=str, default="datasets/連想語頻度表/all/power_0.05/htrkpns_30_4exp.csv.gz")
+    parser.add_argument('--input_path', type=str, default="datasets/連想語頻度表/all/power_0.05/htrkpnsv3_30_4exp.csv.gz")
     parser.add_argument('--model', type=str, default="rinna/japanese-gpt-neox-3.6b")
     parser.add_argument('--num_refs', type=int, default=3)
+    parser.add_argument('--seed', type=int, default=19990429)
     parser.add_argument('--template_dir', type=str, default="datasets/連想語頻度表/templates")
     parser.add_argument('--template_name', type=str, required=True)
     parser.add_argument('--tokenizer', type=str, default="rinna/japanese-gpt-neox-3.6b")
     args = parser.parse_args()
 
-    text_generation_model = TextGenerationModel(args.tokenizer, args.model, args.device_type)
+    text_generation_model = TextGenerationModel(args.tokenizer, args.model, args.device_type, args.seed)
 
     # 刺激語と連想語と抽出文数と抽出文からなるデータを読み込む
     logger.info(f"Dataset: {args.input_path}")
@@ -164,3 +174,5 @@ if __name__ == "__main__":
     # メイン
     text_generation_model.generate_and_dump(sample_data, template, output_path, args.num_refs)
     logger.info("All done")
+
+    result_formatter(text_generation_model.result_dir, args.num_refs)

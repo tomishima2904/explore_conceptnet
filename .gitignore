@@ -171,6 +171,7 @@ datasets/stair_actions_captions
 datasets/STAIR-captions
 datasets/jawiki-20221226
 datasets/rel_gen/*rhts*
+datasets/rel_gen/*htns*
 datasets/rel_gen/statistics
 nohup.out
 hoge*
