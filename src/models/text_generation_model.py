@@ -29,7 +29,6 @@ class TextGenerationModel(object):
         # 出力結果保存用ディレクトリの設定
         self.date_time = get_12chars_datetime()
         self.result_dir = f"results/ja/連想語頻度表/results/{self.date_time}"
-        self.result_dir = f"results/ja/連想語頻度表/validity/{seed}_{self.date_time}"
         if not os.path.isdir(self.result_dir):
             os.makedirs(self.result_dir)
 
