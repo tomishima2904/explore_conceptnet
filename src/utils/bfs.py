@@ -4,81 +4,66 @@ import csv
 import re
 import json
 import sys
+import os
+import datetime
 import logzero
 from logzero import logger
+from collections import defaultdict, deque
 
-import file_handlers as fh
-from summarize_routes import summarize_routes
+# from summarize_routes import summarize_routes
 
 
-def find_shortest_path(data: list, source: str, target: str) -> tuple:
-    graph = {}
+def find_shortest_paths(data: list, start_uri: str, end_uri: str) -> tuple:
+    # グラフを隣接リスト形式で表現
+    adjacency_list = defaultdict(list)
+    edge_relations = defaultdict(list)
     for r, h, t in data:
-        if h not in graph:
-            graph[h] = []
-        graph[h].append((r, t))
+        adjacency_list[h].append(t)
+        edge_relations[(h, t)].append(r)
 
-    re_start = r".*" + re.escape(source) + r"$"
-    re_end = r".*" + re.escape(target) + r"$"
-
-    start_and_end_entity = [None, None]
-
-    # entity の 正確な URIを見つける
-    for key in graph.keys():
-        if None in start_and_end_entity:
-            if re.search(re_start, key):
-                start = key
-                start_and_end_entity[0] = key
-            if re.search(re_end, key):
-                end = key
-                start_and_end_entity[1] = key
+    # start or end の uri が ConceptNet内に存在するかを検証
+    # FIXME: head にしか注目していない (おそらく問題はないが)
+    re_start = r".*" + re.escape(start_uri) + r"$"
+    re_end = r".*" + re.escape(end_uri) + r"$"
+    start_and_end_uri = [None, None]
+    for uri in adjacency_list:
+        if None in start_and_end_uri:
+            if re.search(re_start, uri):
+                start_and_end_uri[0] = uri
+            if re.search(re_end, uri):
+                start_and_end_uri[1] = uri
         else:
             break
 
-    # start or end の uri が存在しない場合
-    # TODO: 名寄せ問題
-    if None in start_and_end_entity:
-        logger.info(f"Entity doesn't exist in data")
-        return start_and_end_entity, [([], [])]
+    # uri が ConceptNet上に存在しない場合
+    if None in start_and_end_uri:
+        logger.info(f"{start_uri} or {end_uri} don't exist in adjacency_list")
+        return start_and_end_uri, [([], [])]
 
-    # 幅優先探索 (bfs)
-    queue = deque([(start, [], [])])
-    visited = set()
+    # 幅優先探索で最短経路を求める
+    start, end = start_and_end_uri
+    queue = deque([(start, [start], [])])
     shortest_paths = []
-    min_path_length = float('inf')
-
+    visited = set()
+    
     while queue:
         node, path, relations = queue.popleft()
+        visited.add(node)
+        
+        for neighbor in adjacency_list[node]:
+            relation = edge_relations[(node, neighbor)]
+            if neighbor not in visited:
+                if neighbor == end:
+                    shortest_paths.append((path + [neighbor], relations + [relation]))
+                else:
+                    queue.append((neighbor, path + [neighbor], relations + [relation]))
 
-        if len(path) > min_path_length:
-            # より短い経路が見つかっている場合、探索終了
-            logger.info(shortest_paths)
-            break
-
-        # node が target の URI の条件に合致したら
-        # すなわち、最短経路が見つかった場合、経路と共に返す
-        if node == end:
-            # より短い経路が見つかった場合、それまでの経路を無効化
-            if len(path) < min_path_length:
-                shortest_paths = []
-                min_path_length = len(path)
-
-            # 現在の経路と関係を最短経路として追加
-            shortest_paths.append((path + [node], relations))
-            continue
-
-        if node in graph:
-            for r, neighbor in graph[node]:
-                if neighbor not in visited:
-                    queue.append((neighbor, path + [node], relations + [r]))
-                    visited.add(neighbor)
-
-    # 経路がない場合
     if shortest_paths == []:
-        logger.info(f"No paths found from {source} to {target}.")
-        shortest_paths = [([], [])]
+        logger.info(f"No paths found from {start} to {end}")
+    else:
+        logger.info(shortest_paths)
 
-    return start_and_end_entity, shortest_paths
+    return start_and_end_uri, shortest_paths
 
 
 if __name__ == "__main__":
@@ -108,11 +93,15 @@ if __name__ == "__main__":
     input_path = "datasets/連想語頻度表/pairs/all_htp.csv"
 
     output_dir = "datasets/連想語頻度表/pairs"
-    fh.makedirs(output_dir)
-    output_path = f"{output_dir}/all_routes2.csv"
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir)
+    output_path = f"{output_dir}/all_routes3.csv"
 
-    datetime = fh.get_12chars_datetime()
-    logzero.logfile(f"logs/{datetime}.log")
+    t_delta = datetime.timedelta(hours=9)
+    JST = datetime.timezone(t_delta, 'JST')
+    now = datetime.datetime.now(JST)
+    date_time = now.strftime('%y%m%d%H%M%S')
+    logzero.logfile(f"logs/{date_time}.log")
     sys.stderr = logzero.setup_logger(formatter=logzero.LogFormatter())  # エラー出力をLogzeroのログにリダイレクト
 
     with open(input_path, 'r') as rf, open(output_path, 'w') as wf:
@@ -121,7 +110,7 @@ if __name__ == "__main__":
         writer = csv.writer(wf)
 
         # 出力ファイルのheader
-        # writer.writerow(("source", "source_uri", "target", "target_uri", "hops", "paths", "relations"))
+        writer.writerow(("source", "source_uri", "target", "target_uri", "hops", "paths", "relations"))
 
         for i, row in enumerate(reader):
             # 一つの刺激語に対して最大10個の連想語へのルートを幅優先探索
@@ -134,7 +123,7 @@ if __name__ == "__main__":
             source_uri = f"/c/ja/{head_entity}"
             target_uri = f"/c/ja/{tail_entity}"
 
-            start_and_end, shortest_paths_and_rels = find_shortest_path(conceptnet, source_uri, target_uri)
+            start_and_end, shortest_paths_and_rels = find_shortest_paths(conceptnet, source_uri, target_uri)
             source_uri, target_uri = start_and_end
             shortest_paths = [pair[0] for pair in shortest_paths_and_rels]
             relations = [pair[1] for pair in shortest_paths_and_rels]
