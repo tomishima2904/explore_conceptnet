@@ -1,5 +1,6 @@
 import gzip
 import csv
+import json
 
 from extract_entity import extract_entity
 from normalize_neologd import normalize_neologd
@@ -76,17 +77,44 @@ def make_word_pairs(input_path, output_path):
     with open(output_path, "w") as f:
         writer = csv.writer(f)
         writer.writerows(word_pairs)
+    print(f"Successfully dumped {output_path}!")
+
+
+# トリプレットからheadとtailをキーにrelationをバリューにもつ辞書 (h2t2rels.json) を作成
+def make_h2t2rels(input_path, output_path):
+    with open(input_path, 'r') as f:
+        reader = csv.reader(f)
+        conceptnet_dict = {}
+        for r, h, t in reader:
+            if h not in conceptnet_dict:
+                conceptnet_dict[h] = {}
+            if t not in conceptnet_dict[h]:
+                conceptnet_dict[h][t] = []
+            if r not in conceptnet_dict[h][t]:
+                conceptnet_dict[h][t].append(r)
+
+    with open(output_path, 'w') as f:
+        json.dump(conceptnet_dict, f, ensure_ascii=False)
+    print(f"Successfully dumped {output_path}!")
 
 
 if __name__ == "__main__":
     lang = "en_ja"
     dataset_dir = f"datasets/conceptnet-assertions-5.7.0/{lang}"
 
+    # ConceptNetにある relation_type, head, tail のトリプレットをcsv形式でdump
     input_path = f"{dataset_dir}/conceptnet-assertions-5.7.0_{lang}.csv.gz"
     output_path = f"{dataset_dir}/origin_triplets.csv"
     removed_path = f"{dataset_dir}/removed_triplets.csv.gz"
     conceptnet_to_triplets(input_path, output_path, removed_path)
 
+    # uriからentityを抽出しているため、1つのheadとtailの組に対して複数のrelation_typeを持つものもある
+    # そこで、重複を取り除いてheadとtailの組がを出力 (順序考慮)
     input_path = f"{dataset_dir}/origin_triplets.csv"
     output_path = f"{dataset_dir}/origin_word_pairs.csv"
     make_word_pairs(input_path, output_path)
+
+    # head と tail をキーに relation をバリューにもつ辞書を作成
+    input_path = f"{dataset_dir}/origin_triplets.csv"
+    output_path = f"{dataset_dir}/h2t2rels.json"
+    make_h2t2rels(input_path, output_path)
