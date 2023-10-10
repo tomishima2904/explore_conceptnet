@@ -2,7 +2,10 @@ from collections import deque
 import gzip
 import csv
 import re
-import os
+import json
+import sys
+import logzero
+from logzero import logger
 
 import file_handlers as fh
 from summarize_routes import summarize_routes
@@ -35,7 +38,7 @@ def find_shortest_path(data: list, source: str, target: str) -> tuple:
     # start or end の uri が存在しない場合
     # TODO: 名寄せ問題
     if None in start_and_end_entity:
-        print(f"Entity doesn't exist in data")
+        logger.info(f"Entity doesn't exist in data")
         return start_and_end_entity, [([], [])]
 
     # 幅優先探索 (bfs)
@@ -49,7 +52,7 @@ def find_shortest_path(data: list, source: str, target: str) -> tuple:
 
         if len(path) > min_path_length:
             # より短い経路が見つかっている場合、探索終了
-            print(shortest_paths)
+            logger.info(shortest_paths)
             break
 
         # node が target の URI の条件に合致したら
@@ -72,7 +75,7 @@ def find_shortest_path(data: list, source: str, target: str) -> tuple:
 
     # 経路がない場合
     if shortest_paths == []:
-        print(f"No paths found from {source} to {target}.")
+        logger.info(f"No paths found from {source} to {target}.")
         shortest_paths = [([], [])]
 
     return start_and_end_entity, shortest_paths
@@ -80,18 +83,10 @@ def find_shortest_path(data: list, source: str, target: str) -> tuple:
 
 if __name__ == "__main__":
 
-    lang = "ja"
+    lang = "en_ja"
     dataset_dir = f"datasets/conceptnet-assertions-5.7.0/{lang}"
     input_file = f"conceptnet-assertions-5.7.0_{lang}.csv.gz"
     conceptnet_path = f"{dataset_dir}/{input_file}"
-
-    char_type = "カタカナ"
-    eval_dir = f"連想語頻度表/{char_type}"
-    frequencies_dir = f"datasets/{eval_dir}"
-
-    result_dir = f"results/{lang}"
-    output_dir = f"{result_dir}/{eval_dir}"
-    fh.makedirs(output_dir)
 
     conceptnet = []
     with gzip.open(conceptnet_path, 'rt') as f:
@@ -109,39 +104,54 @@ if __name__ == "__main__":
     例. "{""dataset"": ""/d/wiktionary/en"", ""license"": ""cc:by-sa/4.0"", ""sources"": [{""contributor"": ""/s/resource/wiktionary/en"", ""process"": ""/s/process/wikiparsec/2""}], ""weight"": 1.0}"
     """
 
-    # ディレクトリ内のファイル名を取得
-    file_names = os.listdir(frequencies_dir)
+    # head, tail, 連想強度
+    input_path = "datasets/連想語頻度表/pairs/all_htp.csv"
 
-    for file_name in file_names:
-        eval_input_file = f"{frequencies_dir}/{file_name}"
-        df = fh.read_csv_as_df(eval_input_file, header=0)
-        head_entity = file_name.replace('.csv', '')
-        start_node = f"/c/{lang}/{head_entity}"
+    output_dir = "datasets/連想語頻度表/pairs"
+    fh.makedirs(output_dir)
+    output_path = f"{output_dir}/all_routes2.csv"
 
-        eval_output_file = f"{output_dir}/{file_name}"
-        with open(eval_output_file, "w") as wf:
-            writer = csv.writer(wf)
+    datetime = fh.get_12chars_datetime()
+    logzero.logfile(f"logs/{datetime}.log")
+    sys.stderr = logzero.setup_logger(formatter=logzero.LogFormatter())  # エラー出力をLogzeroのログにリダイレクト
 
-            # 出力ファイルのheader
-            writer.writerow(("source_uri", "target_uri", "target", "hops", "paths", "relations"))
+    with open(input_path, 'r') as rf, open(output_path, 'w') as wf:
+        reader = csv.reader(rf)
+        header = next(reader)
+        writer = csv.writer(wf)
 
-            for row in df.itertuples():
-                tail_entity = row[2]
-                target_node = f"/c/{lang}/{tail_entity}"
-                start_and_end, shortest_paths_and_rels = find_shortest_path(conceptnet, start_node, target_node)
-                shortest_paths = [pair[0] for pair in shortest_paths_and_rels]
-                relations = [pair[1] for pair in shortest_paths_and_rels]
+        # 出力ファイルのheader
+        # writer.writerow(("source", "source_uri", "target", "target_uri", "hops", "paths", "relations"))
 
-                shortest_path_len = len(relations[0])
+        for i, row in enumerate(reader):
+            # 一つの刺激語に対して最大10個の連想語へのルートを幅優先探索
+            if int(row[1]) > 10:
+                continue
 
-                writer.writerow((*start_and_end, tail_entity, shortest_path_len, shortest_paths, relations))
+            head_entity = row[2]
+            tail_entity = row[3]
 
-                # 1つの head entity に対して 5つの tail entity へのパスを探す
-                if row[0] == 5:
-                    break
+            source_uri = f"/c/ja/{head_entity}"
+            target_uri = f"/c/ja/{tail_entity}"
 
-    result_dir = f"results/{lang}/連想語頻度表"
-    input_dir = f"{result_dir}/{char_type}"
-    output_path = f"{result_dir}/{char_type}.csv"
-    summarize_routes(input_dir, output_path)
+            start_and_end, shortest_paths_and_rels = find_shortest_path(conceptnet, source_uri, target_uri)
+            source_uri, target_uri = start_and_end
+            shortest_paths = [pair[0] for pair in shortest_paths_and_rels]
+            relations = [pair[1] for pair in shortest_paths_and_rels]
+            shortest_path_len = len(relations[0])
+            """
+            start_and_end: (source_uri, target_uri). ConceptNet上に存在しない場合はNone
+            shortest_paths_and_rels: (shortest_paths, relations)
+            shortest_pahts: source_uri から target_uri までの最短経路長にあるノード (uri)
+            relations: ノード間を繋ぐ relation type
+            """
 
+            writer.writerow((head_entity, source_uri, tail_entity, target_uri, shortest_path_len, shortest_paths, relations))
+            logger.info(f"{i}: {head_entity} & {tail_entity} done")
+
+    logger.info("All done!")
+
+    # result_dir = f"results/{lang}/連想語頻度表"
+    # input_dir = f"{result_dir}/{char_type}"
+    # output_path = f"{result_dir}/{char_type}.csv"
+    # summarize_routes(input_dir, output_path)
