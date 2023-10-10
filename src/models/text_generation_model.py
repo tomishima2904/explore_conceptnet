@@ -174,4 +174,5 @@ if __name__ == "__main__":
     text_generation_model.generate_and_dump(sample_data, template, output_path, args.num_refs)
     logger.info("All done")
 
-    result_formatter(text_generation_model.result_dir, args.num_refs)
+    # 生成したテキストを見やすいように整形
+    result_formatter(text_generation_model.result_dir, args.num_refs, template_path)
