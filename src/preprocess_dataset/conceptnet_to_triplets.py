@@ -5,7 +5,7 @@ from extract_entity import extract_entity
 from normalize_neologd import normalize_neologd
 
 
-def conceptnet_to_triplets(input_path, output_path, removed_path, lang="ja"):
+def conceptnet_to_triplets(input_path, output_path, removed_path):
     conceptnet = []
     relations = []
     with gzip.open(input_path, 'rt') as f:
@@ -32,8 +32,8 @@ def conceptnet_to_triplets(input_path, output_path, removed_path, lang="ja"):
             if "Not" in relation_uri:
                 continue
 
-            head = extract_entity(lang, row[1])
-            tail = extract_entity(lang, row[2])
+            lang1, head = extract_entity(row[1])
+            lang2, tail = extract_entity(row[2])
             if head == None or tail == None:
                 writer.writerow((i, *row[:]))
                 continue
@@ -42,15 +42,19 @@ def conceptnet_to_triplets(input_path, output_path, removed_path, lang="ja"):
             head = normalize_neologd(head)
             tail = normalize_neologd(tail)
             # 例. "イタリアン_コーヒー" -> "イタリアンコーヒー"
-            if lang == "ja":
+            if lang1 == "ja":
                 head = head.replace("_", "")
-                tail = tail.replace("_", "")
             # 例. "New_York" -> "New York"
             else:
                 head = head.replace("_", " ")
+            if lang2 == "ja":
+                tail = tail.replace("_", "")
+            else:
                 tail = tail.replace("_", " ")
 
             all_data[relation_uri].append([head, tail])
+            if i % 1000 == 0:
+                print(f"{i} lines have been processed")
 
     with open(output_path, 'w') as f:
         writer = csv.writer(f)
@@ -75,7 +79,7 @@ def make_word_pairs(input_path, output_path):
 
 
 if __name__ == "__main__":
-    lang = "ja"
+    lang = "en_ja"
     dataset_dir = f"datasets/conceptnet-assertions-5.7.0/{lang}"
 
     input_path = f"{dataset_dir}/conceptnet-assertions-5.7.0_{lang}.csv.gz"
