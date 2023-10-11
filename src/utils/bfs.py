@@ -10,7 +10,6 @@ import logzero
 from logzero import logger
 from collections import defaultdict, deque
 
-# from summarize_routes import summarize_routes
 
 
 def find_shortest_paths(data: list, start_uri: str, end_uri: str) -> tuple:
@@ -139,8 +138,3 @@ if __name__ == "__main__":
             logger.info(f"{i}: {head_entity} & {tail_entity} done")
 
     logger.info("All done!")
-
-    # result_dir = f"results/{lang}/連想語頻度表"
-    # input_dir = f"{result_dir}/{char_type}"
-    # output_path = f"{result_dir}/{char_type}.csv"
-    # summarize_routes(input_dir, output_path)
