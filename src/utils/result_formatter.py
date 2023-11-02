@@ -2,6 +2,13 @@ import csv
 import re
 import json
 
+
+def completion_formatter(sentence: str):
+    sentence = sentence.lstrip('\n')  # 先頭の改行コードを削除
+    sentence = re.sub(r'[．.。\n].*', '', sentence)  # 句点以降を削除
+    return sentence
+
+
 def result_formatter(result_dir: str, num_refs: int, template_path: str, model=None):
     input_path = f"{result_dir}/generated_texts.csv"
 
@@ -102,3 +109,11 @@ def result_formatter(result_dir: str, num_refs: int, template_path: str, model=N
                     texts.append(after_text)
                 writer.writerow([j, rel, head, tail, texts])
     print(f"Successfully dumped {output_path}")
+
+
+if __name__ == "__main__":
+    result_dir = "results/ja/連想語頻度表/text_generation/231029172552_dev30_C7_0S_0R"
+    num_refs = 0
+    template_path = "datasets/連想語頻度表/templates/zero-shot_no_refs_5.json"
+    model = "rinna/japanese-gpt-neox-3.6b"
+    result_formatter(result_dir, num_refs, template_path)
