@@ -2,7 +2,7 @@ import csv
 import re
 import json
 
-def result_formatter(result_dir: str, num_refs: int, template_path: str):
+def result_formatter(result_dir: str, num_refs: int, template_path: str, model=None):
     input_path = f"{result_dir}/generated_texts.csv"
 
     with open(input_path, 'r') as f:
@@ -11,8 +11,11 @@ def result_formatter(result_dir: str, num_refs: int, template_path: str):
 
     # 出力結果を見やすくするために、結果の比較に不要な部分 (replace_template) を空文字列に置換
     with open(template_path, 'r') as f:
-        templates = json.load(f)
-        replace_template: str = templates["replace_template"]
+        template = json.load(f)
+        if model == "rinna/japanese-gpt-neox-3.6b":
+            replace_template: str = template["replace_template"]
+        else:
+            replace_template = template["prompt_input"]
 
     # 参照文なし
     output_path = f"{result_dir}/formatted_results.txt"
@@ -27,8 +30,14 @@ def result_formatter(result_dir: str, num_refs: int, template_path: str):
 
                 f.write(f"{rel}, {head}, {tail}\n")
                 for s in generated_sentences:
-                    replaced_s = s.replace(replace_template, "")
-                    f.write(f"{replaced_s}\n")
+                    tmp_replace_template = replace_template
+                    if "{head}" in tmp_replace_template:
+                        tmp_replace_template = tmp_replace_template.replace("{head}", head)
+                    if "{tail}" in tmp_replace_template:
+                        tmp_replace_template = tmp_replace_template.replace("{tail}", tail)
+                    replaced_s = s.replace(tmp_replace_template, "")
+                    trimmed_s = completion_formatter(replaced_s)
+                    f.write(f",{trimmed_s}\n")
                 f.write("\n")
     # 参照文あり
     else:
@@ -63,7 +72,15 @@ def result_formatter(result_dir: str, num_refs: int, template_path: str):
                 tail = row[1]
                 rel = eval(row[2])[0]
                 generated_sentences = eval(row[-1])
-                replaced_senteces = [s.replace(replace_template, "") for s in generated_sentences]
+                replaced_senteces = []
+                for s in generated_sentences:
+                    tmp_replace_template = replace_template
+                    if "{head}" in tmp_replace_template:
+                        tmp_replace_template = tmp_replace_template.replace("{head}", head)
+                    if "{tail}" in tmp_replace_template:
+                        tmp_replace_template = tmp_replace_template.replace("{tail}", tail)
+                    replaced_s = s.replace(tmp_replace_template, "")
+                    replaced_senteces.append(replaced_s)
                 writer.writerow([i, rel, head, tail, replaced_senteces])
 
     # 参照文あり
