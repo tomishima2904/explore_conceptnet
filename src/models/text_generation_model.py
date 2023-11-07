@@ -22,8 +22,8 @@ csv.field_size_limit(gb_to_bytes)
 
 class TextGenerationModel(object):
     def __init__(self,
-                 tokenizer:str="rinna/japanese-gpt-neox-3.6b",
-                 model:str="rinna/japanese-gpt-neox-3.6b",
+                 tokenizer:str="matsuo-lab/weblab-10b",
+                 model:str="matsuo-lab/weblab-10b",
                  device_type:str="cuda",
                  seed:int=19990429) -> None:
         # 出力結果保存用ディレクトリの設定
@@ -50,8 +50,8 @@ class TextGenerationModel(object):
         if model == "rinna/japanese-gpt-neox-3.6b":
             self.tokenizer = AutoTokenizer.from_pretrained(tokenizer, use_fast=False)
             self.model = AutoModelForCausalLM.from_pretrained(model)
-        # TODO: device_map="auto" for `cyberagent/open-calm-7b`
-        elif model == "cyberagent/open-calm-7b" or "matsuo-lab/weblab-10b":
+        # TODO: device_map="auto" for `cyberagent/open-calm-7b` and `cyberagent/calm2-7b`
+        elif model == "cyberagent/open-calm-7b" or "cyberagent/calm2-7b" or "matsuo-lab/weblab-10b":
             self.tokenizer = AutoTokenizer.from_pretrained(tokenizer)
             self.model = AutoModelForCausalLM.from_pretrained(model, torch_dtype=torch.float16)
         elif model == "pfnet/plamo-13b":
@@ -139,13 +139,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--device_type', type=str, default="cuda:0")
     parser.add_argument('--input_path', type=str, default="datasets/連想語頻度表/all/power_0.05/htrkpnsv3_30_4exp.csv.gz")
-    parser.add_argument('--model', type=str, default="rinna/japanese-gpt-neox-3.6b")
+    parser.add_argument('--model', type=str, default="matsuo-lab/weblab-10b")
     parser.add_argument('--num_return_sequences', type=int, default=3)
     parser.add_argument('--num_refs', type=int, default=3)
     parser.add_argument('--seed', type=int, default=19990429)
     parser.add_argument('--template_dir', type=str, default="datasets/連想語頻度表/templates")
     parser.add_argument('--template_name', type=str, required=True)
-    parser.add_argument('--tokenizer', type=str, default="rinna/japanese-gpt-neox-3.6b")
+    parser.add_argument('--tokenizer', type=str, default="matsuo-lab/weblab-10b")
     args = parser.parse_args()
 
     text_generation_model = TextGenerationModel(args.tokenizer, args.model, args.device_type, args.seed)
