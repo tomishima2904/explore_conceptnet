@@ -303,6 +303,14 @@ if __name__ == "__main__":
     5) rrs: List[Tuple(float, float)]
     6) labels: List[int]
     """
+    # 手動でラベル付した結果をエクセルにコピペしやすいように`labels.txt`を出力
+    output_path = f"{result_dir}/labels.txt"
+    with open(output_path, 'w') as wf:
+        labels = [eval(row[-1]) for row in input_data]
+        for row in labels:
+            label_sum = sum(row)
+            wf.write(f"{label_sum}\n")
+    
 
     scatter_diff_between_m_and_a(input_data, result_dir)
     plot_line_graphs(input_data, result_dir)
