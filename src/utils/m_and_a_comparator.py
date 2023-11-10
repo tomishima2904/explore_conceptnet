@@ -68,16 +68,20 @@ def merge_m_and_a_results(
             completions_a = [completion_a for completion_a in eval(input_data_a[i][3])]
             ranks_a = [rank for rank in eval(input_data_a[i][4])]
             rrs_a = [rr for rr in eval(input_data_a[i][5])]
+            scores_a = [score for score in eval(input_data_a[i][6])]
             
-            # MRRの和をキーに全て降順にソートする
-            sorted_rrs_indices = sorted(range(num_return_sequences), key=lambda i: rrs_a[i][0]+rrs_a[i][1], reverse=True)
+            # MRRの和を第1キーに，softmax_scoreの和を第2キーにして，全て降順にソートする
+            sorted_rrs_indices = sorted(range(num_return_sequences),
+                                        key=lambda j: (rrs_a[j][0]+rrs_a[j][1], scores_a[j][0]+scores_a[j][1]),
+                                        reverse=True)
+            sorted_completions = [completions_a[j] for j in sorted_rrs_indices]
             sorted_ranks = [ranks_a[j] for j in sorted_rrs_indices]
             sorted_rrs = [rrs_a[j] for j in sorted_rrs_indices]
+            sorted_scores = [scores_a[j] for j in sorted_rrs_indices]
             sorted_labels_m = [label_m[j] for j in sorted_rrs_indices]
-            sorted_completions = [completions_a[j] for j in sorted_rrs_indices]
 
             # 全体の結果を1行に出力
-            output_row = [rel, head, tail, sorted_completions, sorted_ranks, sorted_rrs, sorted_labels_m]
+            output_row = [rel, head, tail, sorted_completions, sorted_ranks, sorted_rrs, sorted_scores, sorted_labels_m]
             writer.writerow(output_row)
 
             # 各completionの結果に関して個別のファイルに出力
@@ -85,8 +89,8 @@ def merge_m_and_a_results(
             with open(output_path_detail, 'w') as f:
                 writer_detail = csv.writer(f)
                 writer_detail.writerow((rel, head, tail))
-                for cpl, rank, rr, label in zip(sorted_completions, sorted_ranks, sorted_rrs, sorted_labels_m):
-                    writer_detail.writerow((cpl, rank, rr, label))
+                for cpl, rank, rr, score, label in zip(sorted_completions, sorted_ranks, sorted_rrs, sorted_scores, sorted_labels_m):
+                    writer_detail.writerow((cpl, rank, rr, score, label))
                 
     print(f"Successfully dumple {output_path}!")
 
@@ -112,7 +116,7 @@ def scatter_diff_between_m_and_a(input_data, output_dir, model_name="Matsuo10"):
     in_sentence_tail_rrs_f = []
     in_sentence_tail_rrs_t = []
     for row in input_data:
-        for rank_pair, rr_pair, label in zip(eval(row[4]), eval(row[5]), eval(row[6])):
+        for rank_pair, rr_pair, label in zip(eval(row[4]), eval(row[5]), eval(row[-1])):
             label = int(label)
             head_rank, tail_rank = rank_pair
             head_rr, tail_rr = rr_pair
@@ -172,7 +176,8 @@ def plot_line_graphs(input_data: List,
     3) completions: List[str]
     4) ranks: List[Tuple(int, int)]
     5) rrs: List[Tuple(float, float)]
-    6) labels: List[int]
+    6) softmax_scores: List[Tuple(float, float)]
+    7) labels: List[int]
     """
 
     all_labels = np.array([eval(row[-1]) for row in input_data])
@@ -311,6 +316,33 @@ if __name__ == "__main__":
             label_sum = sum(row)
             wf.write(f"{label_sum}\n")
     
+    num_output_cpls = args.topk_cpls
+    output_path = f"{result_dir}/diffs_btween_manda_formatted{num_output_cpls}.txt"
+    tmp_input_data = [[*row[:3],
+                       (eval(row[3]))[:num_output_cpls],
+                       (eval(row[4]))[:num_output_cpls],
+                       (eval(row[5]))[:num_output_cpls],
+                       (eval(row[6]))[:num_output_cpls],
+                       (eval(row[-1]))[:num_output_cpls],
+                       ]for row in input_data]
+    tmp_input_data.sort(key=lambda x: np.average(x[5]), reverse=True)
+    with open(output_path, 'w') as wf:
+        for row in tmp_input_data:
+            wf.write(f"{row[0]} {row[1]} {row[2]}\n")
+            rrs_list = []
+            label_sum = 0
+            for i, (cpl, rrs, scores, label) in enumerate(zip(row[3], row[5], row[6], row[-1])):
+                rrs_str = f"({rrs[0]:.2f},{rrs[1]:.2f})"
+                scores_str = f"({scores[0]:.2f},{scores[1]:.2f})"
+                if i >= num_output_cpls:
+                    break
+                else:
+                    wf.write(f"{label},{rrs_str},{scores_str},{cpl}\n")
+                    rrs_list.append(rrs)
+                    label_sum += int(label)
+            rrs_np_list = np.array(rrs_list)
+            wf.write(f"sum:{label_sum}, head:{np.average(rrs_np_list[:,0]):.2f}, tail:{np.average(rrs_np_list[:,1]):.2f}, all:{np.average(rrs_np_list):.2f}\n")
+            wf.write("\n")
 
     scatter_diff_between_m_and_a(input_data, result_dir)
     plot_line_graphs(input_data, result_dir)
