@@ -39,6 +39,7 @@ def merge_m_and_a_results(
         input_data_a: List,
         output_path: str,
         output_dir: str,
+        intra_selection_option = "softmax",
         num_return_sequences=30,
         num_pairs=25):
     """input_data_m
@@ -71,9 +72,17 @@ def merge_m_and_a_results(
             scores_a = [score for score in eval(input_data_a[i][6])]
             
             # MRRの和を第1キーに，softmax_scoreの和を第2キーにして，全て降順にソートする
-            sorted_rrs_indices = sorted(range(num_return_sequences),
-                                        key=lambda j: (rrs_a[j][0]+rrs_a[j][1], scores_a[j][0]+scores_a[j][1]),
-                                        reverse=True)
+            if intra_selection_option == "softmax":
+                sorted_rrs_indices = sorted(range(num_return_sequences),
+                                            key=lambda j: (rrs_a[j][0]+rrs_a[j][1],
+                                                           scores_a[j][0]+scores_a[j][1]),
+                                            reverse=True)
+            else:
+                sorted_rrs_indices = sorted(range(num_return_sequences),
+                                            key=lambda j: (rrs_a[j][0]+rrs_a[j][1],
+                                                           1/len(completions_a[j]),
+                                                           scores_a[j][0]+scores_a[j][1]),
+                                            reverse=True)
             sorted_completions = [completions_a[j] for j in sorted_rrs_indices]
             sorted_ranks = [ranks_a[j] for j in sorted_rrs_indices]
             sorted_rrs = [rrs_a[j] for j in sorted_rrs_indices]
@@ -279,10 +288,19 @@ if __name__ == "__main__":
     parser.add_argument('--num_pairs', type=int, default=25)
     parser.add_argument('--num_return_sequences', type=int, default=30)
     parser.add_argument('--seed', type=int, default=19990429)
+    parser.add_argument('--intra_selection_option', type=str, default='softmax', choices=['softmax', 'len'])
     parser.add_argument('--topk', type=int, default=100)
+    parser.add_argument('--topk_cpls', type=int, default=6)
     args = parser.parse_args()
 
     result_dir = args.result_dir
+    sub_result_dir = f"{result_dir}/m_and_a"
+    if args.intra_selection_option == "softmax":
+        sub_result_dir = f"{sub_result_dir}/softmax"
+    elif args.intra_selection_option == "len":
+        sub_result_dir = f"{sub_result_dir}/len"
+    else:
+        sub_result_dir = f"{sub_result_dir}/other"
 
     input_path_m = f"{result_dir}/formatted_results_.txt"
     input_path_a = f"{result_dir}/rated_results.csv"
@@ -291,11 +309,11 @@ if __name__ == "__main__":
         assert len(input_data_m) == (args.num_return_sequences + 1) * args.num_pairs
         a_reader = csv.reader(af)
         input_data_a = [line for line in a_reader]
-    output_path = f"{result_dir}/diffs_btween_manda.csv"
-    output_dir = f"{result_dir}/diffs_btween_manda"
-    merge_m_and_a_results(input_data_m, input_data_a, output_path, output_dir)
+    output_path = f"{sub_result_dir}/diffs_btween_manda.csv"
+    output_dir = f"{sub_result_dir}/diffs_btween_manda"
+    merge_m_and_a_results(input_data_m, input_data_a, output_path, output_dir, args.intra_selection_option)
 
-    input_path = f"{result_dir}/diffs_btween_manda.csv"
+    input_path = f"{sub_result_dir}/diffs_btween_manda.csv"
     with open(input_path, 'r') as f:
         reader = csv.reader(f)
         input_data = [row for row in reader]
@@ -316,16 +334,24 @@ if __name__ == "__main__":
             label_sum = sum(row)
             wf.write(f"{label_sum}\n")
     
+    # Few-shot用に使うcompletionsを選定するためにデータをソートして出力
     num_output_cpls = args.topk_cpls
-    output_path = f"{result_dir}/diffs_btween_manda_formatted{num_output_cpls}.txt"
+    sorted_input_data = [row for row in input_data]
+    sorted_input_data.sort(key=lambda x: np.average(eval(x[5])), reverse=True)
+    output_path = f"{sub_result_dir}/diffs_btween_manda_formatted{num_output_cpls}.csv"
+    with open(output_path, 'w') as wf:
+        writer = csv.writer(wf)
+        writer.writerows(sorted_input_data)
+
+    # sorted_input_dataを見やすいようにテキストファイルで出力
     tmp_input_data = [[*row[:3],
                        (eval(row[3]))[:num_output_cpls],
                        (eval(row[4]))[:num_output_cpls],
                        (eval(row[5]))[:num_output_cpls],
                        (eval(row[6]))[:num_output_cpls],
                        (eval(row[-1]))[:num_output_cpls],
-                       ]for row in input_data]
-    tmp_input_data.sort(key=lambda x: np.average(x[5]), reverse=True)
+                       ]for row in sorted_input_data]
+    output_path = f"{sub_result_dir}/diffs_btween_manda_formatted{num_output_cpls}.txt"
     with open(output_path, 'w') as wf:
         for row in tmp_input_data:
             wf.write(f"{row[0]} {row[1]} {row[2]}\n")
@@ -344,5 +370,6 @@ if __name__ == "__main__":
             wf.write(f"sum:{label_sum}, head:{np.average(rrs_np_list[:,0]):.2f}, tail:{np.average(rrs_np_list[:,1]):.2f}, all:{np.average(rrs_np_list):.2f}\n")
             wf.write("\n")
 
-    scatter_diff_between_m_and_a(input_data, result_dir)
-    plot_line_graphs(input_data, result_dir)
+    # 各種グラフを描画
+    scatter_diff_between_m_and_a(input_data, sub_result_dir)
+    plot_line_graphs(input_data, sub_result_dir)
