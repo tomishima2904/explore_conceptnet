@@ -78,44 +78,53 @@ class CompletionsRater(object):
             head_masked_outputs = self.model(input_ids=head_masked_ids.unsqueeze(0), position_ids=position_ids)
             tail_masked_outputs = self.model(input_ids=tail_masked_ids.unsqueeze(0), position_ids=position_ids)
 
-            head_rank = out_of_rank  # topk内に正解語がない場合, その順位はtopkとなる.
-            head_rr = 0  # rr = reciprocal rank (逆順位: 順位の逆数)
-
             # headのトークンがcompletion内に存在しない場合，初期順位にはout_of_sentenceを与える
             if len(head_indices) == 0:
                 head_rank = out_of_sentence
+                head_rr = -1
             # headのトークンがcompletion内に存在する場合，初期順位にはout_of_rankを与える
             else:
-                head_rank = out_of_rank
-            for head_index in head_indices:
-                predictions = head_masked_outputs[0][0, head_index].topk(topk)
-                for i, index_t in enumerate(predictions.indices):
-                    index = index_t.item()
-                    token = self.tokenizer.convert_ids_to_tokens([index])[0]
-                    if token == head or head_rank == i:
-                        head_rank = i
-                        head_rr = 1/(head_rank+1)
-                        break
-            if head_rank >= out_of_sentence:
-                head_rr = -1
+                head_ranks = []
+                for head_index in head_indices:
+                    predictions = head_masked_outputs[0][0, head_index].topk(topk)
+                    for i, index_t in enumerate(predictions.indices):
+                        index = index_t.item()
+                        token = self.tokenizer.convert_ids_to_tokens([index])[0]
+                        if token == head:
+                            head_ranks.append(i)
+                            break
+                # topk内に1つも正解語が現れない場合
+                if len(head_ranks) == 0:
+                    head_rank = out_of_rank
+                    head_rr = 0
+                # topk内に少なくとも1つ以上正解語が現れた場合
+                else:
+                    head_rank = min(head_ranks)
+                    head_rr = 1/(head_rank+1)
 
-            tail_rank = out_of_rank
-            tail_rr = 0
+            # tailのトークンがcompletion内に存在しない場合，初期順位にはout_of_sentenceを与える
             if len(tail_indices) == 0:
                 tail_rank = out_of_sentence
-            else:
-                tail_rank = out_of_rank
-            for tail_index in tail_indices:
-                predictions = tail_masked_outputs[0][0, tail_index].topk(topk)
-                for i, index_t in enumerate(predictions.indices):
-                    index = index_t.item()
-                    token = self.tokenizer.convert_ids_to_tokens([index])[0]
-                    if token == tail or tail_rank == i:
-                        tail_rank = i
-                        tail_rr = 1/(tail_rank+1)
-                        break
-            if tail_rank >= out_of_sentence:
                 tail_rr = -1
+            # tailのトークンがcompletion内に存在する場合，初期順位にはout_of_rankを与える
+            else:
+                tail_ranks = []
+                for tail_index in tail_indices:
+                    predictions = tail_masked_outputs[0][0, tail_index].topk(topk)
+                    for i, index_t in enumerate(predictions.indices):
+                        index = index_t.item()
+                        token = self.tokenizer.convert_ids_to_tokens([index])[0]
+                        if token == tail:
+                            tail_ranks.append(i)
+                            break
+                # topk内に1つも正解語が現れない場合
+                if len(tail_ranks) == 0:
+                    tail_rank = out_of_rank
+                    tail_rr = 0
+                # topk内に少なくとも1つ以上正解語が現れた場合
+                else:
+                    tail_rank = min(tail_ranks)
+                    tail_rr = 1/(tail_rank+1)
 
         return head_rank, tail_rank, head_rr, tail_rr
 
