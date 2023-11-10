@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 from transformers import AutoTokenizer, AutoModelForCausalLM, set_seed
 
 import re
@@ -82,51 +83,63 @@ class CompletionsRater(object):
             if len(head_indices) == 0:
                 head_rank = out_of_sentence
                 head_rr = -1
+                head_score = 0
             # headのトークンがcompletion内に存在する場合，初期順位にはout_of_rankを与える
             else:
                 head_ranks = []
                 for head_index in head_indices:
                     predictions = head_masked_outputs[0][0, head_index].topk(topk)
+                    prediction_scores = F.softmax(head_masked_outputs[0][0, head_index], dim=-1)
                     for i, index_t in enumerate(predictions.indices):
                         index = index_t.item()
                         token = self.tokenizer.convert_ids_to_tokens([index])[0]
                         if token == head:
-                            head_ranks.append(i)
+                            softmax_score = prediction_scores[index].item()
+                            head_ranks.append((i, softmax_score))
                             break
                 # topk内に1つも正解語が現れない場合
                 if len(head_ranks) == 0:
                     head_rank = out_of_rank
                     head_rr = 0
+                    head_score = 0
                 # topk内に少なくとも1つ以上正解語が現れた場合
                 else:
-                    head_rank = min(head_ranks)
+                    head_ranks.sort(key=lambda x: x[0])
+                    head_rank = head_ranks[0][0]
                     head_rr = 1/(head_rank+1)
+                    head_score = head_ranks[0][1]
 
             # tailのトークンがcompletion内に存在しない場合，初期順位にはout_of_sentenceを与える
             if len(tail_indices) == 0:
                 tail_rank = out_of_sentence
                 tail_rr = -1
+                tail_score = 0
             # tailのトークンがcompletion内に存在する場合，初期順位にはout_of_rankを与える
             else:
                 tail_ranks = []
                 for tail_index in tail_indices:
                     predictions = tail_masked_outputs[0][0, tail_index].topk(topk)
+                    prediction_scores = F.softmax(tail_masked_outputs[0][0, tail_index], dim=-1)
                     for i, index_t in enumerate(predictions.indices):
                         index = index_t.item()
                         token = self.tokenizer.convert_ids_to_tokens([index])[0]
                         if token == tail:
-                            tail_ranks.append(i)
+                            softmax_score = prediction_scores[index].item()
+                            tail_ranks.append((i, softmax_score))
                             break
                 # topk内に1つも正解語が現れない場合
                 if len(tail_ranks) == 0:
                     tail_rank = out_of_rank
                     tail_rr = 0
+                    tail_score = 0
                 # topk内に少なくとも1つ以上正解語が現れた場合
                 else:
-                    tail_rank = min(tail_ranks)
+                    tail_ranks.sort(key=lambda x: x[0])
+                    tail_rank = tail_ranks[0][0]
                     tail_rr = 1/(tail_rank+1)
+                    tail_score = tail_ranks[0][1]
 
-        return head_rank, tail_rank, head_rr, tail_rr
+        return head_rank, tail_rank, head_rr, tail_rr, head_score, tail_score
 
 
     def rate_completions(self, input_data: List):
@@ -141,20 +154,17 @@ class CompletionsRater(object):
             trimmed_completions = []
             ranks = []
             rrs = []
+            softmax_scores = []
             for completion in row[-1]:
                 trimmed_completion = completion_formatter(completion)
                 trimmed_completions.append(trimmed_completion)
-                head_rank, tail_rank, head_rr, tail_rr = \
+                head_rank, tail_rank, head_rr, tail_rr, head_score, tail_score = \
                     completion_rater.execution_accuracy(trimmed_completion, row[1], row[2], args.topk)
                 ranks.append((head_rank, tail_rank))
                 rrs.append((head_rr, tail_rr))
+                softmax_scores.append((head_score, tail_score))
 
-                # ランクの昇順に出力をソートする場合 (しないほうがいいかも)
-                # sorted_ranks_indices = sorted(range(len(ranks)), key=lambda i: ranks[i][0]+ranks[i][1])
-                # ranks = [ranks[i] for i in sorted_ranks_indices]
-                # trimmed_completions = [trimmed_completions[i] for i in sorted_ranks_indices]
-
-            rated_result.append([*row[:-1], trimmed_completions ,ranks, rrs])
+            rated_result.append([*row[:-1], trimmed_completions ,ranks, rrs, softmax_scores])
             
         return rated_result
 
