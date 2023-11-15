@@ -1,18 +1,37 @@
 import csv
 import re
+import json
 
-def result_formatter(result_dir: str, num_refs: int):
-    input_path = f"{result_dir}/generated_texts.csv"
+
+def completion_formatter(sentence: str):
+    sentence = sentence.lstrip('\n')  # 先頭の改行コードを削除
+    sentence = re.sub(r'[．.。\n].*', '', sentence)  # 句点以降を削除
+    return sentence
+
+
+def result_formatter(input_path: str,
+                     output_path_txt: str,
+                     output_path_csv: str,
+                     num_refs: int,
+                     template_path: str,
+                     model=None):
 
     with open(input_path, 'r') as f:
         reader = csv.reader(f)
         all_data = [row for row in reader]
 
-    # 0-shotかつ参照文なし
-    output_path = f"{result_dir}/formatted_results.txt"
+    # 出力結果を見やすくするために、結果の比較に不要な部分 (replace_template) を空文字列に置換
+    with open(template_path, 'r') as f:
+        template = json.load(f)
+        if model == "rinna/japanese-gpt-neox-3.6b":
+            replace_template: str = template["replace_template"]
+        else:
+            replace_template = template["prompt_input"]
+
+    # 参照文なし
     reference_text = "上記の文を参考にして、"
     if num_refs == 0:
-        with open(output_path, 'w') as f:
+        with open(output_path_txt, 'w') as f:
             for row in all_data:
                 head = row[0]
                 tail = row[1]
@@ -21,11 +40,18 @@ def result_formatter(result_dir: str, num_refs: int):
 
                 f.write(f"{rel}, {head}, {tail}\n")
                 for s in generated_sentences:
-                    f.write(f"{s}\n")
+                    tmp_replace_template = replace_template
+                    if "{head}" in tmp_replace_template:
+                        tmp_replace_template = tmp_replace_template.replace("{head}", head)
+                    if "{tail}" in tmp_replace_template:
+                        tmp_replace_template = tmp_replace_template.replace("{tail}", tail)
+                    replaced_s = s.replace(tmp_replace_template, "")
+                    trimmed_s = completion_formatter(replaced_s)
+                    f.write(f",{trimmed_s}\n")
                 f.write("\n")
-    #  0-shotかつ参照文あり
+    # 参照文あり
     else:
-        with open(output_path, 'w') as f:
+        with open(output_path_txt, 'w') as f:
             for row in all_data:
                 head = row[0]
                 tail = row[1]
@@ -35,29 +61,39 @@ def result_formatter(result_dir: str, num_refs: int):
                 f.write(f"{rel}, {head}, {tail}\n")
 
                 for i, generated_sentence in enumerate(generated_sentences):
-                    reference_position = generated_sentence.index(reference_text)
-                    after_text = generated_sentence[reference_position + len(reference_text):]
+                    replaced_sentece = generated_sentence.replace(replace_template, "")
+                    reference_position = replaced_sentece.index(reference_text)
+                    after_text = replaced_sentece[reference_position + len(reference_text):]
                     f.write(after_text)
                     f.write("\n")
                 f.write("\n")
-    print(f"Successfully dumped {output_path}")
+    print(f"Successfully dumped {output_path_txt}")
 
-    output_path = f"{result_dir}/formatted_results.csv"
+    # 結果をCSV形式でも出力
 
-    # 0-shotかつ参照文なし (csv出力)
+    # 参照文なし
     if num_refs == 0:
-        with open(output_path, 'w') as f:
+        with open(output_path_csv, 'w') as f:
             writer = csv.writer(f)
             for i, row in enumerate(all_data):
                 head = row[0]
                 tail = row[1]
                 rel = eval(row[2])[0]
                 generated_sentences = eval(row[-1])
-                writer.writerow([i, rel, head, tail, generated_sentences])
+                replaced_senteces = []
+                for s in generated_sentences:
+                    tmp_replace_template = replace_template
+                    if "{head}" in tmp_replace_template:
+                        tmp_replace_template = tmp_replace_template.replace("{head}", head)
+                    if "{tail}" in tmp_replace_template:
+                        tmp_replace_template = tmp_replace_template.replace("{tail}", tail)
+                    replaced_s = s.replace(tmp_replace_template, "")
+                    replaced_senteces.append(replaced_s)
+                writer.writerow([i, rel, head, tail, replaced_senteces])
 
-    # 0-shotかつ参照文あり (csv出力)
+    # 参照文あり
     else:
-        with open(output_path, 'w') as f:
+        with open(output_path_csv, 'w') as f:
             writer = csv.writer(f)
             for j, row in enumerate(all_data):
                 head = row[0]
@@ -68,8 +104,19 @@ def result_formatter(result_dir: str, num_refs: int):
                 texts = []
 
                 for i, generated_sentence in enumerate(generated_sentences):
-                    reference_position = generated_sentence.index(reference_text)
-                    after_text = generated_sentence[reference_position + len(reference_text):]
+                    replaced_sentece = generated_sentence.replace(replace_template, "")
+                    reference_position = replaced_sentece.index(reference_text)
+                    after_text = replaced_sentece[reference_position + len(reference_text):]
                     texts.append(after_text)
                 writer.writerow([j, rel, head, tail, texts])
-    print(f"Successfully dumped {output_path}")
+    print(f"Successfully dumped {output_path_csv}")
+
+
+if __name__ == "__main__":
+    input_path = f"{result_dir}/generated_texts.csv"
+    output_path_txt = f"{result_dir}/formatted_results.txt"
+    output_path_csv = f"{result_dir}/formatted_results.csv"
+    num_refs = 0
+    template_path = "datasets/連想語頻度表/templates/zero-shot_no_refs_5.json"
+    model = "rinna/japanese-gpt-neox-3.6b"
+    result_formatter(input_path, output_path_txt, output_path_csv, num_refs, template_path)

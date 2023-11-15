@@ -22,14 +22,13 @@ csv.field_size_limit(gb_to_bytes)
 
 class TextGenerationModel(object):
     def __init__(self,
-                 tokenizer:str="rinna/japanese-gpt-neox-3.6b",
-                 model:str="rinna/japanese-gpt-neox-3.6b",
+                 tokenizer:str="matsuo-lab/weblab-10b",
+                 model:str="matsuo-lab/weblab-10b",
                  device_type:str="cuda",
                  seed:int=19990429) -> None:
         # 出力結果保存用ディレクトリの設定
         self.date_time = get_12chars_datetime()
-        self.result_dir = f"results/ja/連想語頻度表/results/{self.date_time}"
-        self.result_dir = f"results/ja/連想語頻度表/validity/{seed}_{self.date_time}"
+        self.result_dir = f"results/ja/連想語頻度表/text_generation/{self.date_time}"
         if not os.path.isdir(self.result_dir):
             os.makedirs(self.result_dir)
 
@@ -43,15 +42,21 @@ class TextGenerationModel(object):
         random.seed(seed)
 
         # トークナイザーおよびモデルの読み込み
+        tokenizer = model  # 怠惰
         logger.info(f"Tokenizer: {tokenizer}")
         logger.info(f"Model: {model}")
-        if model == "rinna/japanese-gpt-neox-3.6b":  # https://huggingface.co/rinna/japanese-gpt-neox-3.6b
+
+        # Please refer to `https://huggingface.co/{model}
+        if model == "rinna/japanese-gpt-neox-3.6b":
             self.tokenizer = AutoTokenizer.from_pretrained(tokenizer, use_fast=False)
             self.model = AutoModelForCausalLM.from_pretrained(model)
-        # TODO: device_map="auto"
-        elif model == "cyberagent/open-calm-7b":  # https://huggingface.co/cyberagent/open-calm-7b
-            self.tokenizer = AutoTokenizer.from_pretrained("cyberagent/open-calm-7b")
-            self.model = AutoModelForCausalLM.from_pretrained("cyberagent/open-calm-7b", torch_dtype=torch.float16)
+        # TODO: device_map="auto" for `cyberagent/open-calm-7b` and `cyberagent/calm2-7b`
+        elif model == "cyberagent/open-calm-7b" or "cyberagent/calm2-7b" or "matsuo-lab/weblab-10b":
+            self.tokenizer = AutoTokenizer.from_pretrained(tokenizer)
+            self.model = AutoModelForCausalLM.from_pretrained(model, torch_dtype=torch.float16)
+        elif model == "pfnet/plamo-13b":
+            self.tokenizer = AutoTokenizer.from_pretrained(tokenizer, trust_remote_code=True)
+            self.model = AutoModelForCausalLM.from_pretrained(model, trust_remote_code=True)
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(tokenizer)
             self.model = AutoModelForCausalLM.from_pretrained(model)
@@ -134,12 +139,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--device_type', type=str, default="cuda:0")
     parser.add_argument('--input_path', type=str, default="datasets/連想語頻度表/all/power_0.05/htrkpnsv3_30_4exp.csv.gz")
-    parser.add_argument('--model', type=str, default="rinna/japanese-gpt-neox-3.6b")
+    parser.add_argument('--model', type=str, default="matsuo-lab/weblab-10b")
+    parser.add_argument('--num_return_sequences', type=int, default=3)
     parser.add_argument('--num_refs', type=int, default=3)
     parser.add_argument('--seed', type=int, default=19990429)
     parser.add_argument('--template_dir', type=str, default="datasets/連想語頻度表/templates")
     parser.add_argument('--template_name', type=str, required=True)
-    parser.add_argument('--tokenizer', type=str, default="rinna/japanese-gpt-neox-3.6b")
+    parser.add_argument('--tokenizer', type=str, default="matsuo-lab/weblab-10b")
     args = parser.parse_args()
 
     text_generation_model = TextGenerationModel(args.tokenizer, args.model, args.device_type, args.seed)
@@ -172,7 +178,10 @@ if __name__ == "__main__":
     output_path = f"{text_generation_model.result_dir}/generated_texts.csv"
 
     # メイン
-    text_generation_model.generate_and_dump(sample_data, template, output_path, args.num_refs)
+    text_generation_model.generate_and_dump(sample_data, template, output_path, args.num_refs, args.num_return_sequences)
     logger.info("All done")
 
-    result_formatter(text_generation_model.result_dir, args.num_refs)
+    # 生成したテキストを見やすいように整形
+    output_path_csv = f"{text_generation_model.result_dir}/formatted_results.csv"
+    output_path_txt = f"{text_generation_model.result_dir}/formatted_results.txt"
+    result_formatter(output_path_csv, output_path_txt, args.num_refs, template_path, args.model)

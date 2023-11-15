@@ -1,7 +1,7 @@
 import gzip
 import csv
 import file_handlers as fh
-from extract_entity import extract_entity
+from preprocess_dataset.extract_entity import extract_entity
 
 
 def build_vocab(input_path: str, output_path: str):
@@ -16,13 +16,13 @@ def build_vocab(input_path: str, output_path: str):
 
 
 # uri から entity を抜き出して vocab を作成
-def build_cleaned_vocab(input_path: str, output_path: str, lang="ja"):
+def build_cleaned_vocab(input_path: str, output_path: str):
     vocab_set = set([])
     with gzip.open(input_path, 'rt') as rf:
         reader = csv.reader(rf, delimiter='\t')
         for row in reader:
             # URI から entity 部分のみを抽出
-            cleaned_entity = extract_entity(lang, row[2])
+            cleaned_entity = extract_entity(row[2])
             vocab_set.add(cleaned_entity)
     vocab_dict = {value: i for i, value in enumerate(vocab_set)}
     fh.write_json(output_path, vocab_dict)
