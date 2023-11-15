@@ -168,6 +168,7 @@ class CompletionsRater(object):
             
         return rated_result
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--result_dir', type=str, default="datasets/連想語頻度表/all/power_0.05/htrkpnsv3_30_4exp.csv.gz")
