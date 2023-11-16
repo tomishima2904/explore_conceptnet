@@ -80,7 +80,7 @@ def result_formatter(input_path: str,
                 tail = row[1]
                 rel = eval(row[2])[0]
                 generated_sentences = eval(row[-1])
-                replaced_senteces = []
+                formatted_completions = []
                 for s in generated_sentences:
                     tmp_replace_template = replace_template
                     if "{head}" in tmp_replace_template:
@@ -88,8 +88,9 @@ def result_formatter(input_path: str,
                     if "{tail}" in tmp_replace_template:
                         tmp_replace_template = tmp_replace_template.replace("{tail}", tail)
                     replaced_s = s.replace(tmp_replace_template, "")
-                    replaced_senteces.append(replaced_s)
-                writer.writerow([i, rel, head, tail, replaced_senteces])
+                    trimmed_s = completion_formatter(replaced_s)
+                    formatted_completions.append(trimmed_s)
+                writer.writerow([i, rel, head, tail, formatted_completions])
 
     # 参照文あり
     else:
@@ -113,10 +114,11 @@ def result_formatter(input_path: str,
 
 
 if __name__ == "__main__":
+    result_dir = "results/ja/連想語頻度表/evaluation/master/231115101840_12"
     input_path = f"{result_dir}/generated_texts.csv"
     output_path_txt = f"{result_dir}/formatted_results.txt"
     output_path_csv = f"{result_dir}/formatted_results.csv"
     num_refs = 0
-    template_path = "datasets/連想語頻度表/templates/zero-shot_no_refs_5.json"
+    template_path = "datasets/連想語頻度表/templates/few-shot_no_refs_5.json"
     model = "rinna/japanese-gpt-neox-3.6b"
     result_formatter(input_path, output_path_txt, output_path_csv, num_refs, template_path)
