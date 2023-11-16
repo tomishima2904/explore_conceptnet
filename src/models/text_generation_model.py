@@ -182,6 +182,7 @@ if __name__ == "__main__":
     logger.info("All done")
 
     # 生成したテキストを見やすいように整形
+    input_path = f"{text_generation_model.result_dir}/generated_texts.csv"
     output_path_csv = f"{text_generation_model.result_dir}/formatted_results.csv"
     output_path_txt = f"{text_generation_model.result_dir}/formatted_results.txt"
-    result_formatter(output_path_csv, output_path_txt, args.num_refs, template_path, args.model)
+    result_formatter(input_path, output_path_txt, output_path_csv, args.num_refs, template_path, args.model)
