@@ -6,6 +6,9 @@ import os
 from tqdm import tqdm
 import numpy as np
 import matplotlib.pyplot as plt
+import glob
+
+from result_formatter import convert_formatted_results_tolist
 
 
 # 手動でアノテーションしたデータをcsv形式で出力 (あんま使わない)
@@ -35,24 +38,22 @@ def output_manualy_annotated_results(
 
 # 手動評価と自動評価の結果を結合してcsv出力
 def merge_m_and_a_results(
-        input_data_m: List,
-        input_data_a: List,
+        labels_list: List[int],
+        input_data: List,
         output_path: str,
         output_dir: str,
         intra_selection_option = "softmax",
         num_return_sequences=30,
         num_pairs=25):
-    """input_data_m
-    inhomogenious list
-    """
 
-    """input_data_a
+    """input_data
     0) rel: str
     1) head: str
     2) tail: str
     3) completions: List[str]
     4) ranks: List[Tuple(int, int)]
     5) rrs: List[Tuple(float, float)]
+    6) scores: List[Tuple(float, float)]
     """
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
@@ -60,37 +61,34 @@ def merge_m_and_a_results(
     with open(output_path, 'w') as wf:
         writer = csv.writer(wf)
         for i in range(num_pairs):
-            rel, head, tail = (input_data_m[(num_return_sequences+1)*i]).split(", ")
-            tail = tail.rstrip("\n")
-            assert head == input_data_a[i][1] and tail == input_data_a[i][2], f"{head} & {input_data_a[i][1]}; {tail} & {input_data_a[i][2]}"
-            label_m = [int(input_data_m[j][0]) for j in range((num_return_sequences+1)*i+1, (num_return_sequences+1)*(i+1))]
-            assert len(label_m) == num_return_sequences
-            # completions_m = [(input_data_m[j][2:]).rstrip("\n") for j in range((num_return_sequences+1)*i+1, (num_return_sequences+1)*(i+1))]
-            completions_a = [completion_a for completion_a in eval(input_data_a[i][3])]
-            ranks_a = [rank for rank in eval(input_data_a[i][4])]
-            rrs_a = [rr for rr in eval(input_data_a[i][5])]
-            scores_a = [score for score in eval(input_data_a[i][6])]
+            rel, head, tail = input_data[i][:3]
+            completions = input_data[i][3]
+            completions = [completion for completion in eval(input_data[i][3])]
+            ranks = [rank for rank in eval(input_data[i][4])]
+            rrs = [rr for rr in eval(input_data[i][5])]
+            scores = [score for score in eval(input_data[i][6])]
+            labels = labels_list[i]
             
             # MRRの和を第1キーに，softmax_scoreの和を第2キーにして，全て降順にソートする
             if intra_selection_option == "softmax":
                 sorted_rrs_indices = sorted(range(num_return_sequences),
-                                            key=lambda j: (rrs_a[j][0]+rrs_a[j][1],
-                                                           scores_a[j][0]+scores_a[j][1]),
+                                            key=lambda j: (rrs[j][0]+rrs[j][1],
+                                                           scores[j][0]+scores[j][1]),
                                             reverse=True)
             else:
                 sorted_rrs_indices = sorted(range(num_return_sequences),
-                                            key=lambda j: (rrs_a[j][0]+rrs_a[j][1],
-                                                           1/len(completions_a[j]),
-                                                           scores_a[j][0]+scores_a[j][1]),
+                                            key=lambda j: (rrs[j][0]+rrs[j][1],
+                                                           1/len(completions[j]),
+                                                           scores[j][0]+scores[j][1]),
                                             reverse=True)
-            sorted_completions = [completions_a[j] for j in sorted_rrs_indices]
-            sorted_ranks = [ranks_a[j] for j in sorted_rrs_indices]
-            sorted_rrs = [rrs_a[j] for j in sorted_rrs_indices]
-            sorted_scores = [scores_a[j] for j in sorted_rrs_indices]
-            sorted_labels_m = [label_m[j] for j in sorted_rrs_indices]
+            sorted_completions = [completions[j] for j in sorted_rrs_indices]
+            sorted_ranks = [ranks[j] for j in sorted_rrs_indices]
+            sorted_rrs = [rrs[j] for j in sorted_rrs_indices]
+            sorted_scores = [scores[j] for j in sorted_rrs_indices]
+            sorted_labels = [labels[j] for j in sorted_rrs_indices]
 
             # 全体の結果を1行に出力
-            output_row = [rel, head, tail, sorted_completions, sorted_ranks, sorted_rrs, sorted_scores, sorted_labels_m]
+            output_row = [rel, head, tail, sorted_completions, sorted_ranks, sorted_rrs, sorted_scores, sorted_labels]
             writer.writerow(output_row)
 
             # 各completionの結果に関して個別のファイルに出力
@@ -98,7 +96,7 @@ def merge_m_and_a_results(
             with open(output_path_detail, 'w') as f:
                 writer_detail = csv.writer(f)
                 writer_detail.writerow((rel, head, tail))
-                for cpl, rank, rr, score, label in zip(sorted_completions, sorted_ranks, sorted_rrs, sorted_scores, sorted_labels_m):
+                for cpl, rank, rr, score, label in zip(sorted_completions, sorted_ranks, sorted_rrs, sorted_scores, sorted_labels):
                     writer_detail.writerow((cpl, rank, rr, score, label))
                 
     print(f"Successfully dumple {output_path}!")
@@ -302,16 +300,30 @@ if __name__ == "__main__":
     else:
         sub_result_dir = f"{sub_result_dir}/other"
 
-    input_path_m = f"{result_dir}/formatted_results_.txt"
-    input_path_a = f"{result_dir}/rated_results.csv"
-    with open(input_path_m, 'r') as mf, open(input_path_a, 'r') as af:
-        input_data_m = [line for line in mf if line.strip()]
-        assert len(input_data_m) == (args.num_return_sequences + 1) * args.num_pairs
-        a_reader = csv.reader(af)
-        input_data_a = [line for line in a_reader]
+    # 手動でラベル付したデータを読み込んでラベル部分のみ抽出
+    pattern = "formatted_results_?.txt"
+    input_paths = glob.glob(f"{args.result_dir}/{pattern}")  # formatted_results_{任意の1文字}.txt
+    all_labels = []
+    for input_path in input_paths:
+        labeled_data = convert_formatted_results_tolist(input_path)
+        labels = [row[-1] for row in labeled_data]
+        all_labels.append(labels)
+
+    # ラベル部分に対しバッチ方向に合計を計算
+    all_labels = np.array(all_labels)
+    assert all_labels.shape == (len(input_paths), args.num_pairs, args.num_return_sequences), \
+        f"{all_labels.shape} != {(len(input_paths), args.num_pairs, args.num_return_sequences)}"
+    summed_all_labels = np.sum(all_labels, axis=0)
+    
+    # 自動で評価したデータを読み込んで，手動で評価したデータと統合
+    input_path = f"{result_dir}/rated_results.csv"
+    with open(input_path, 'r') as f:
+        reader = csv.reader(f)
+        input_data = [line for line in reader]
+
     output_path = f"{sub_result_dir}/diffs_btween_manda.csv"
     output_dir = f"{sub_result_dir}/diffs_btween_manda"
-    merge_m_and_a_results(input_data_m, input_data_a, output_path, output_dir, args.intra_selection_option)
+    merge_m_and_a_results(summed_all_labels, input_data, output_path, output_dir, args.intra_selection_option)
 
     input_path = f"{sub_result_dir}/diffs_btween_manda.csv"
     with open(input_path, 'r') as f:

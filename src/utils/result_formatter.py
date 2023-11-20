@@ -113,6 +113,30 @@ def result_formatter(input_path: str,
     print(f"Successfully dumped {output_path_csv}")
 
 
+# result_formmaterによって出力されたテキストファイルに対し，手動でラベル付したものを読み込んでリスト形式に変換
+def convert_formatted_results_tolist(input_path: str, num_return_sequences=30, num_pairs=25):
+    """output_data
+    0) rel: str
+    1) head: str
+    2) tail: str
+    3) completions: List[str]
+    4) labels: List[int]
+    """
+    with open(input_path, 'r') as f:
+        input_data = [line for line in f if line.strip()]
+        assert len(input_data) == (num_return_sequences + 1) * num_pairs
+
+    output_data = []
+    for i in range(num_pairs):
+        rel, head, tail = (input_data[(num_return_sequences+1)*i]).split(", ")
+        tail = tail.rstrip("\n")
+        labels = [int(input_data[j][0]) for j in range((num_return_sequences+1)*i+1, (num_return_sequences+1)*(i+1))]
+        assert len(labels) == num_return_sequences
+        completions = [(input_data[j][2:]).rstrip("\n") for j in range((num_return_sequences+1)*i+1, (num_return_sequences+1)*(i+1))]
+        output_data.append([rel, head, tail, completions, labels])
+    return output_data
+
+
 if __name__ == "__main__":
     result_dir = "results/ja/連想語頻度表/evaluation/master/231115101840_12"
     input_path = f"{result_dir}/generated_texts.csv"
