@@ -80,7 +80,7 @@ def result_formatter(input_path: str,
                 tail = row[1]
                 rel = eval(row[2])[0]
                 generated_sentences = eval(row[-1])
-                replaced_senteces = []
+                formatted_completions = []
                 for s in generated_sentences:
                     tmp_replace_template = replace_template
                     if "{head}" in tmp_replace_template:
@@ -88,8 +88,9 @@ def result_formatter(input_path: str,
                     if "{tail}" in tmp_replace_template:
                         tmp_replace_template = tmp_replace_template.replace("{tail}", tail)
                     replaced_s = s.replace(tmp_replace_template, "")
-                    replaced_senteces.append(replaced_s)
-                writer.writerow([i, rel, head, tail, replaced_senteces])
+                    trimmed_s = completion_formatter(replaced_s)
+                    formatted_completions.append(trimmed_s)
+                writer.writerow([i, rel, head, tail, formatted_completions])
 
     # 参照文あり
     else:
@@ -112,11 +113,36 @@ def result_formatter(input_path: str,
     print(f"Successfully dumped {output_path_csv}")
 
 
+# result_formmaterによって出力されたテキストファイルに対し，手動でラベル付したものを読み込んでリスト形式に変換
+def convert_formatted_results_tolist(input_path: str, num_return_sequences=30, num_pairs=25):
+    """output_data
+    0) rel: str
+    1) head: str
+    2) tail: str
+    3) completions: List[str]
+    4) labels: List[int]
+    """
+    with open(input_path, 'r') as f:
+        input_data = [line for line in f if line.strip()]
+        assert len(input_data) == (num_return_sequences + 1) * num_pairs
+
+    output_data = []
+    for i in range(num_pairs):
+        rel, head, tail = (input_data[(num_return_sequences+1)*i]).split(", ")
+        tail = tail.rstrip("\n")
+        labels = [int(input_data[j][0]) for j in range((num_return_sequences+1)*i+1, (num_return_sequences+1)*(i+1))]
+        assert len(labels) == num_return_sequences
+        completions = [(input_data[j][2:]).rstrip("\n") for j in range((num_return_sequences+1)*i+1, (num_return_sequences+1)*(i+1))]
+        output_data.append([rel, head, tail, completions, labels])
+    return output_data
+
+
 if __name__ == "__main__":
+    result_dir = "results/ja/連想語頻度表/evaluation/master/231115101840_12"
     input_path = f"{result_dir}/generated_texts.csv"
     output_path_txt = f"{result_dir}/formatted_results.txt"
     output_path_csv = f"{result_dir}/formatted_results.csv"
     num_refs = 0
-    template_path = "datasets/連想語頻度表/templates/zero-shot_no_refs_5.json"
+    template_path = "datasets/連想語頻度表/templates/few-shot_no_refs_5.json"
     model = "rinna/japanese-gpt-neox-3.6b"
     result_formatter(input_path, output_path_txt, output_path_csv, num_refs, template_path)
