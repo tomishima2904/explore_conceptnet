@@ -103,7 +103,7 @@ def merge_m_and_a_results(
 
 
 # 手動評価と自動評価の相関を見るために散布図をプロット (あんま役に立たない)
-def scatter_diff_between_m_and_a(input_data, output_dir, model_name="Matsuo10"):
+def scatter_diff_between_m_and_a(input_data, output_dir, model_name="Matsuo10", max_score_for_each_label=3):
     """input_data
     0) relation: str
     1) head: str
@@ -122,9 +122,11 @@ def scatter_diff_between_m_and_a(input_data, output_dir, model_name="Matsuo10"):
     in_sentence_head_rrs_t = []
     in_sentence_tail_rrs_f = []
     in_sentence_tail_rrs_t = []
-    for row in input_data:
-        for rank_pair, rr_pair, label in zip(eval(row[4]), eval(row[5]), eval(row[-1])):
-            label = int(label)
+    
+    threshold = (max_score_for_each_label+1)//2
+    masked_all_labels = (np.array([eval(row[-1]) for row in input_data]) > threshold).astype(int)
+    for row, labels in zip(input_data, masked_all_labels):
+        for rank_pair, rr_pair, label in zip(eval(row[4]), eval(row[5]), labels):
             head_rank, tail_rank = rank_pair
             head_rr, tail_rr = rr_pair
             if label == 1:
@@ -152,7 +154,7 @@ def scatter_diff_between_m_and_a(input_data, output_dir, model_name="Matsuo10"):
     plt.xlabel("head")
     plt.ylabel("tail")
     plt.title(f"Diff for In_sentence with {model_name}")
-    fig_path = f"{output_dir}/diff_in_sentence.png"
+    fig_path = f"{output_dir}/diff_in_sentence{threshold}.png"
     plt.savefig(fig_path)
     plt.close()
 
@@ -165,7 +167,7 @@ def scatter_diff_between_m_and_a(input_data, output_dir, model_name="Matsuo10"):
     plt.ylabel("tail")
     plt.title(f"Diff for All with {model_name}")
 
-    fig_path = f"{output_dir}/diff_all.png"
+    fig_path = f"{output_dir}/diff_all{threshold}.png"
     plt.savefig(fig_path)
     plt.close()
 
@@ -175,7 +177,8 @@ def plot_line_graphs(input_data: List,
                      output_dir: str,
                      num_return_sequences=30,
                      rel_type_num=5,
-                     row_num_per_rel_type=5):
+                     row_num_per_rel_type=5,
+                     max_score_for_each_label=3):
     """input_data
     0) relation: str
     1) head: str
@@ -188,6 +191,8 @@ def plot_line_graphs(input_data: List,
     """
 
     all_labels = np.array([eval(row[-1]) for row in input_data])
+    threshold = (max_score_for_each_label+1)//2
+    masked_all_labels = (all_labels > threshold).astype(int)
     all_rrs = [eval(row[5]) for row in input_data]
     all_mrrs = np.array([[np.average(pair) for pair in row] for row in all_rrs])
     assert all_labels.shape == tuple((rel_type_num*row_num_per_rel_type, num_return_sequences))
@@ -195,19 +200,19 @@ def plot_line_graphs(input_data: List,
     assert len(rels) == rel_type_num*row_num_per_rel_type
 
     # 折れ線グラフ
-    avg_labels = np.average(all_labels, axis=0)
+    avg_labels = np.average(masked_all_labels, axis=0)
     plt.figure()
     plt.plot(range(len(avg_labels)), avg_labels)
     plt.title("Avg of binary labels sorted by sum of reciprocal rank")
     plt.xlabel("Rank")
     plt.ylabel("Avg of manually labeled score")
     plt.ylim(-0.1,1.1)
-    fig_path = f"{output_dir}/line_plot_all.png"
+    fig_path = f"{output_dir}/line_plot_all{threshold}.png"
     plt.savefig(fig_path)
     plt.close()
 
     # 累積折れ線グラフをプロット
-    cumulative_labels = np.array([[any(labels[:i+1]) for i in range(len(labels))] for labels in all_labels])
+    cumulative_labels = np.array([[any(labels[:i+1]) for i in range(len(labels))] for labels in masked_all_labels])
     avg_cumulative_labels = np.average(cumulative_labels, axis=0)
     plt.figure()
     plt.plot(range(1, len(avg_cumulative_labels)+1), avg_cumulative_labels)
@@ -216,12 +221,12 @@ def plot_line_graphs(input_data: List,
     plt.ylabel("Avg of manually labeled score")
     plt.ylim(-0.1,1.1)
     plt.grid()
-    fig_path = f"{output_dir}/line_plot_cdf.png"
+    fig_path = f"{output_dir}/line_plot_cdf{threshold}.png"
     plt.savefig(fig_path)
     plt.close()
 
     # ついでにcsvも出力
-    output_path1 = f"{output_dir}/cdf_all.csv"
+    output_path1 = f"{output_dir}/cdf_all{threshold}.csv"
     output_path2 = f"{output_dir}/mrr.csv"
     with open(output_path1, 'w') as wf1, open(output_path2, 'w') as wf2:
         writer1 = csv.writer(wf1)
@@ -235,7 +240,7 @@ def plot_line_graphs(input_data: List,
 
     # x個同時にとった時，全て外れである確率を求めるための下準備
     probability_spaces = np.array([[(len(row)-sum(row)-i)/(len(row)-i) if len(row)-sum(row)-i>0 else 0 for i in range(len(row))]
-            for row in all_labels])
+            for row in masked_all_labels])
 
     # x個同時にとった時，全て外れである確率を求める (xは確率変数)
     at_least_prob_spaces = [[1-np.prod(row[:i+1]) for i in range(len(row))] for row in probability_spaces]
@@ -249,12 +254,12 @@ def plot_line_graphs(input_data: List,
     plt.ylabel("Avg of PDF")
     plt.ylim(-0.1,1.1)
     plt.grid()
-    fig_path = f"{output_dir}/line_plot_avg_of_pdf.png"
+    fig_path = f"{output_dir}/line_plot_avg_of_pdf{threshold}.png"
     plt.savefig(fig_path)
     plt.close()
 
     # ついでにcsvも出力
-    output_path = f"{output_dir}/avg_of_pdf.csv"
+    output_path = f"{output_dir}/avg_of_pdf{threshold}.csv"
     with open(output_path, 'w') as wf:
         writer = csv.writer(wf)
         for row, pdf in zip(input_data, at_least_prob_spaces):
@@ -271,7 +276,7 @@ def plot_line_graphs(input_data: List,
     plt.xlim()
     plt.ylim(-0.05,1.1)
     plt.grid()
-    fig_path = f"{output_dir}/line_plot_difference.png"
+    fig_path = f"{output_dir}/line_plot_difference{threshold}.png"
     plt.savefig(fig_path)
     plt.close()
 
