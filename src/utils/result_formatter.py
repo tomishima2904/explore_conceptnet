@@ -38,7 +38,7 @@ def result_formatter(input_path: str,
                 rel = eval(row[2])[0]
                 generated_sentences = eval(row[-1])
 
-                f.write(f"{rel}, {head}, {tail}\n")
+                f.write(f"{head}, {tail}\n")
                 for s in generated_sentences:
                     tmp_replace_template = replace_template
                     if "{head}" in tmp_replace_template:
@@ -143,6 +143,6 @@ if __name__ == "__main__":
     output_path_txt = f"{result_dir}/formatted_results.txt"
     output_path_csv = f"{result_dir}/formatted_results.csv"
     num_refs = 0
-    template_path = "datasets/連想語頻度表/templates/few-shot_no_refs_5.json"
+    template_path = "datasets/連想語頻度表/templates/5-shot_len_deduplicated.json"
     model = "rinna/japanese-gpt-neox-3.6b"
     result_formatter(input_path, output_path_txt, output_path_csv, num_refs, template_path)
