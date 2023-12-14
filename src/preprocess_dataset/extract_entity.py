@@ -1,22 +1,23 @@
 import re
 
 
-def extract_entity(lang: str, uri: str) -> str:
-    pattern = r"/c/" + re.escape(lang) + r"/([^/]+)"
-    match = re.search(pattern, uri)
+def extract_entity(uri: str) -> tuple:
+    pattern = r"/c/([^/]+)/([^/]+)"
+    match = re.match(pattern, uri)
     if match:
-        entity_str = match.group(1)
+        lang, entity_str = match.groups()
     else:
-        entity_str = None
-    return entity_str
+        lang, entity_str = None, None
+    return lang, entity_str
 
 
 if __name__ == "__main__":
     strings = [
-    "/c/ja/hoge/guoo/hoge",
-    "/c/ja/hoge",
-    "/c/ja/fuga/hei",
-    "/c/ja/fuga"
+        "/c/ja/hoge/guoo/hoge",
+        "/c/ja/hoge",
+        "/c/ja/fuga/hei",
+        "/c/ja/fuga"
     ]
     for string in strings:
-        print(extract_entity("ja", string))
+        lang, entity = extract_entity(string)
+        print(f"URI: {string}, Lang: {lang}, Entity: {entity}")
