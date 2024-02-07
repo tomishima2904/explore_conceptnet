@@ -25,11 +25,11 @@ class TextGenerationModel(object):
                  tokenizer:str="matsuo-lab/weblab-10b",
                  model:str="matsuo-lab/weblab-10b",
                  device_type:str="cuda",
-                 seed:int=19990429) -> None:
+                 seed:int=19990429,
+                 dir_name:str="text_generation") -> None:
         # 出力結果保存用ディレクトリの設定
         self.date_time = get_12chars_datetime()
-        self.result_dir = f"results/ja/連想語頻度表/text_generation/{self.date_time}"
-        # self.result_dir = f"results/ja/連想語頻度表/evaluation/master/{self.date_time}_{seed}"
+        self.result_dir = f"results/ja/連想語頻度表/{dir_name}/{self.date_time}_{seed}"
         if not os.path.isdir(self.result_dir):
             os.makedirs(self.result_dir)
 
@@ -139,6 +139,7 @@ class TextGenerationModel(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--device_type', type=str, default="cuda:0")
+    parser.add_argument('--dir_name', type=str, default="text_generation")
     parser.add_argument('--input_path', type=str, default="datasets/連想語頻度表/all/power_0.05/htrkpnsv3_30_4exp.csv.gz")
     parser.add_argument('--model', type=str, default="matsuo-lab/weblab-10b")
     parser.add_argument('--num_return_sequences', type=int, default=3)
@@ -149,7 +150,7 @@ if __name__ == "__main__":
     parser.add_argument('--tokenizer', type=str, default="matsuo-lab/weblab-10b")
     args = parser.parse_args()
 
-    text_generation_model = TextGenerationModel(args.tokenizer, args.model, args.device_type, args.seed)
+    text_generation_model = TextGenerationModel(args.tokenizer, args.model, args.device_type, args.seed, args.dir_name)
 
     # 刺激語と連想語と抽出文数と抽出文からなるデータを読み込む
     logger.info(f"Dataset: {args.input_path}")
