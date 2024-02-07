@@ -21,6 +21,8 @@ from src.models.execution_accuracy import CompletionsRater
 gb_to_bytes = 20 * 1024 * 1024 * 1024
 csv.field_size_limit(gb_to_bytes)
 
+# 修論発表後の追加実験用コード
+# 連想理由を生成した後，MLMによるスコアリングでさらに出力する連想理由を精選する手法
 
 # formatted_results.csvと同じ形式のデータを返す
 # m_and_a_comparator.merge_m_and_a_resultsを参考
@@ -153,7 +155,7 @@ if __name__ == "__main__":
     input_path = f"{text_generation_model.result_dir}/tmp_formatted_results.csv"
     with open(input_path, 'r') as f:
         reader = csv.reader(f)
-        input_data = [[row[1], row[2], row[3], eval(row[4])] for row in reader]  # (head, tail, completions)
+        input_data = [[row[1], row[2], row[3], eval(row[4])] for row in reader]  # (rel, head, tail, completions)
 
     completion_rater = CompletionsRater(args.tokenizer, args.model, args.seed)
 
@@ -180,3 +182,20 @@ if __name__ == "__main__":
                       args.intra_selection_option,
                       args.num_pre_return_sequences,
                       args.num_return_sequences)
+
+    # formatted_results.csv から formmated_results.txt を作成
+    # TODO: この機能は results_formmter.pyで実装しても良い
+    input_path = f"{text_generation_model.result_dir}/formatted_results.csv"
+    output_path = f"{text_generation_model.result_dir}/formatted_results.txt"
+    with open(input_path, 'r') as rf, open(output_path, 'w') as wf:
+        reader = csv.reader(rf)
+        for row in reader:
+            rel = row[1]  # Not used
+            head = row[2]
+            tail = row[3]
+            generated_sentences = eval(row[4])
+            wf.write(f"{head}, {tail}\n")
+            for s in generated_sentences:
+                wf.write(f",{s}\n")
+            wf.write("\n")
+    print(f"Successfully dumped {output_path}")
